@@ -1295,6 +1295,83 @@ export default function SmartMathApp() {
                 </button>
               </div>
               <form onSubmit={handleUpdateProblem} className="space-y-4 max-h-[75vh] overflow-y-auto pr-2">
+               {/* 단원 정보 수정 구역 */}
+<div className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
+  <span className="text-xs font-bold text-indigo-300 block">교육과정 단원 정보 수정</span>
+  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+    <div>
+      <label className="block text-[11px] text-slate-400 mb-1">
+        {editingProblem.level === '고등부' ? '과목명' : '학년'}
+      </label>
+      <select
+        value={editingProblem.step1 || ''}
+        onChange={(e) => setEditingProblem({ ...editingProblem, step1: e.target.value, step2: '', step3: '', step4: '' })}
+        className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white"
+      >
+        <option value="">-- 전체 --</option>
+        {(Object.keys(curriculumData[editingProblem.level] || {})).map(opt => (
+          <option key={opt} value={opt}>{opt}</option>
+        ))}
+      </select>
+    </div>
+
+    <div>
+      <label className="block text-[11px] text-slate-400 mb-1">
+        {editingProblem.level === '고등부' ? '대단원' : '학기'}
+      </label>
+      <select
+        value={editingProblem.step2 || ''}
+        onChange={(e) => setEditingProblem({ ...editingProblem, step2: e.target.value, step3: '', step4: '' })}
+        className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white"
+      >
+        <option value="">-- 전체 --</option>
+        {(editingProblem.step1 ? Object.keys(curriculumData[editingProblem.level]?.[editingProblem.step1] || {}) : []).map(opt => (
+          <option key={opt} value={opt}>{opt}</option>
+        ))}
+      </select>
+    </div>
+
+    <div>
+      <label className="block text-[11px] text-slate-400 mb-1">
+        {editingProblem.level === '고등부' ? '중단원' : '대단원'}
+      </label>
+      <select
+        value={editingProblem.step3 || ''}
+        onChange={(e) => setEditingProblem({ ...editingProblem, step3: e.target.value, step4: '' })}
+        className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white"
+      >
+        <option value="">-- 전체 --</option>
+        {(() => {
+          if (!editingProblem.step1 || !editingProblem.step2) return [];
+          const target = curriculumData[editingProblem.level]?.[editingProblem.step1]?.[editingProblem.step2];
+          return Array.isArray(target) ? target : Object.keys(target || {});
+        })().map((opt: any) => (
+          <option key={opt} value={opt}>{opt}</option>
+        ))}
+      </select>
+    </div>
+
+    <div>
+      <label className="block text-[11px] text-slate-400 mb-1">
+        소단원
+      </label>
+      <select
+        value={editingProblem.step4 || ''}
+        onChange={(e) => setEditingProblem({ ...editingProblem, step4: e.target.value })}
+        className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white"
+      >
+        <option value="">-- 전체 --</option>
+        {(() => {
+          if (!editingProblem.step1 || !editingProblem.step2 || !editingProblem.step3) return [];
+          const target = curriculumData[editingProblem.level]?.[editingProblem.step1]?.[editingProblem.step2]?.[editingProblem.step3];
+          return Array.isArray(target) ? target : [];
+        })().map((opt: string) => (
+          <option key={opt} value={opt}>{opt}</option>
+        ))}
+      </select>
+    </div>
+  </div>
+</div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs text-slate-400 mb-1">문제 제목</label>
@@ -1588,7 +1665,7 @@ export default function SmartMathApp() {
                     </div>
                     <div>
                       <label className="block text-xs text-slate-400 mb-1">
-                        {selectedLevel === '고등부' ? '상세유형' : '소단원'}
+                        소단원
                       </label>
                       <select
                         value={step4}
