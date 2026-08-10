@@ -379,7 +379,12 @@ export default function SmartMathApp() {
   >('dashboard');
 
   // 교사 비밀번호 인증 및 안전 변경 State
-  const [teacherPassword, setTeacherPassword] = useState('1234');
+  const [teacherPassword, setTeacherPassword] = useState(() => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('teacherPassword') || '1234';
+  }
+  return '1234';
+});
   const [isTeacherAuthenticated, setIsTeacherAuthenticated] = useState(false);
   const [inputTeacherPassword, setInputTeacherPassword] = useState('');
   const [teacherPassError, setTeacherPassError] = useState('');
@@ -598,7 +603,11 @@ export default function SmartMathApp() {
       alert('새로운 비밀번호를 입력해주세요.');
       return;
     }
-    setTeacherPassword(newPasswordInput.trim());
+    const updatedPassword = newPasswordInput.trim();
+    setTeacherPassword(updatedPassword);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('teacherPassword', updatedPassword);
+    }
     alert('교사 비밀번호가 성공적으로 변경되었습니다.');
     setShowPasswordChangeModal(false);
     setCurrentPasswordInput('');
