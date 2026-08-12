@@ -3137,7 +3137,13 @@ export default function SmartMathApp() {
             </h2>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => handleDownloadHWF && handleDownloadHWF()}
+               onClick={() => {
+                  if (typeof (window as any).handleDownloadHWF === 'function') {
+                    (window as any).handleDownloadHWF();
+                  } else {
+                    alert('HWP 다운로드 기능을 준비 중입니다.');
+                  }
+                }}
                 className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors"
               >
                 <FileDown className="w-3.5 h-3.5" />
@@ -3182,13 +3188,14 @@ export default function SmartMathApp() {
                       onChange={(e) => setStudentAnswers({ ...studentAnswers, [prob.id]: e.target.value })}
                       className="w-full md:w-64 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white"
                     />
-                  </div>
-                )}
-
-                {/* 3. 필기용 캔버스 */}
+                 {/* 3. 필기용 캔버스 */}
                 <div className="relative border border-slate-800 rounded-xl overflow-hidden bg-slate-950 print:hidden">
                   <canvas
-                    ref={(el) => (canvasRefs.current[prob.id] = el)}
+                    ref={(el) => {
+                      if (canvasRefs.current) {
+                        canvasRefs.current[prob.id] = el;
+                      }
+                    }}
                     width={800}
                     height={300}
                     onMouseDown={(e) => handleCanvasStart(prob.id, e)}
@@ -3205,3 +3212,8 @@ export default function SmartMathApp() {
           })}
         </div>
       )}
+    </div>
+  );
+}
+  );
+}
