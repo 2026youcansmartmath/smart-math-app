@@ -3207,13 +3207,8 @@ export default function SmartMathApp() {
                     className="w-full h-48 cursor-crosshair"
                   />
                 </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
     </div>
   );
-}
-  );
-}
+})}
+</div>
+)}
