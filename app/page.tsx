@@ -3208,7 +3208,7 @@ export default function SmartMathApp() {
                   />
                 </div>
               </div>
-            );
+            )
           })}
         </div>
       )}
