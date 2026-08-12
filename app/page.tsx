@@ -1,4 +1,5 @@
 'use client';
+
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   BookOpen, Printer, PlusCircle, Trash2, LayoutDashboard,
@@ -18,6 +19,7 @@ export const EXAM_YEARS = Array.from(
   { length: currentYear - START_YEAR + 1 },
   (_, i) => `${START_YEAR + i}년`
 ).reverse();
+
 export const EXAM_MONTHS = ['3월', '4월', '6월', '7월', '9월', '10월', '11월(수능)'];
 export const MOCK_GRADES = ['고1', '고2', '고3'];
 
@@ -286,7 +288,7 @@ interface Assignment {
   dueDate: string;
   targetLevel: string;
   problemIds: string[];
-  targetStudents?: number[]; // 특정 선택 학생 ID 목록 (없거나 비어있으면 전체)
+  targetStudents?: number[];
 }
 
 interface SubmissionRecord {
@@ -327,8 +329,10 @@ function isPointInPolygon(point: Point, polygon: Point[]): boolean {
     return false;
   }
   for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    if ((polygon[i].y > point.y) !== (polygon[j].y > point.y) &&
-        point.x < ((polygon[j].x - polygon[i].x) * (point.y - polygon[i].y)) / (polygon[j].y - polygon[i].y) + polygon[i].x) {
+    if (
+      (polygon[i].y > point.y) !== (polygon[j].y > point.y) &&
+      point.x < ((polygon[j].x - polygon[i].x) * (point.y - polygon[i].y)) / (polygon[j].y - polygon[i].y) + polygon[i].x
+    ) {
       isInside = !isInside;
     }
   }
@@ -390,8 +394,8 @@ export default function SmartMathApp() {
     return '1234';
   });
   const [isTeacherAuthenticated, setIsTeacherAuthenticated] = useState(false);
-  const [inputTeacherPassword, setInputTeacherPassword] = useState('');
   const [teacherPassError, setTeacherPassError] = useState('');
+  const [inputTeacherPassword, setInputTeacherPassword] = useState('');
   const [showPasswordChangeModal, setShowPasswordChangeModal] = useState(false);
   const [currentPasswordInput, setCurrentPasswordInput] = useState('');
   const [newPasswordInput, setNewPasswordInput] = useState('');
@@ -449,7 +453,7 @@ export default function SmartMathApp() {
 
   // 학생: 로그인 세션
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentStudent, setCurrentStudent] = useState<{ name: string; phone: string | null } | null>(null);
+  const [currentStudent, setCurrentStudent] = useState<{ name: string; phone: string } | null>(null);
   const [loginName, setLoginName] = useState('');
   const [loginPhoneLast4, setLoginPhoneLast4] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -506,7 +510,7 @@ export default function SmartMathApp() {
 
   const [studentTab, setStudentTab] = useState<'practice' | 'assignment' | 'history'>('practice');
 
-  // 교육과정 분류 선택
+  // 교육과정 분류 선택 State
   const [selectedLevel, setSelectedLevel] = useState<string>('고등부');
   const [step1, setStep1] = useState<string>('');
   const [step2, setStep2] = useState<string>('');
@@ -545,8 +549,7 @@ export default function SmartMathApp() {
   const [assignDueDateMap, setAssignDueDateMap] = useState<Record<string, string>>({});
   const [assignTargetStudentsMap, setAssignTargetStudentsMap] = useState<Record<string, number[]>>({});
 
-  // 학생 문제 추출 설정
-// 548번 줄 근처에 아래 코드 1줄 추가
+  // 학생 문제 추출 및 기타 설정
   const [problemSpacing, setProblemSpacing] = useState<string>('normal');
   const [studentDiff, setStudentDiff] = useState<string>('전체');
   const [multipleCount, setMultipleCount] = useState<number>(3);
@@ -731,6 +734,7 @@ export default function SmartMathApp() {
       alert('조건에 부합하는 문제가 문제은행에 없습니다. 다른 단원이나 조건으로 변경해 보세요!');
       return;
     }
+
     setCurrentGeneratedExam(combined);
     setGeneratedExamTitle(generatedExamTitle.trim() || `${selectedLevel} ${step1 || ''} 맞춤 출제 시험지`);
   };
@@ -745,8 +749,9 @@ export default function SmartMathApp() {
       targetLevel: selectedLevel,
       problems: currentGeneratedExam
     };
+
     setSavedExams(prev => [newExam, ...prev]);
-    alert(`"${newExam.title}" 시험지가 출제 보관함에 저장되었습니다!`);
+    alert(`${newExam.title} 시험지가 출제 보관함에 저장되었습니다!`);
     setCurrentGeneratedExam([]);
     setGeneratedExamTitle('');
     setViewMode('saved_exams');
@@ -754,13 +759,13 @@ export default function SmartMathApp() {
 
   // 교사: 보관함 시험지 삭제
   const handleDeleteSavedExam = (examId: string, title: string) => {
-    if (confirm(`"${title}" 시험지를 출제 보관함에서 삭제하시겠습니까?`)) {
+    if (confirm(`${title} 시험지를 출제 보관함에서 삭제하시겠습니까?`)) {
       setSavedExams(prev => prev.filter(e => e.id !== examId));
       alert('시험지가 삭제되었습니다.');
     }
   };
 
-  // 교사: 보관함 시험지를 학생들에게 과제로 부과 (개별 대상 선택 가능)
+  // 교사: 보관함 시험지를 학생들에게 과제로 부과
   const handleAssignExamToStudents = (exam: SavedExamPaper) => {
     const dueDate = assignDueDateMap[exam.id];
     if (!dueDate) {
@@ -768,7 +773,6 @@ export default function SmartMathApp() {
       return;
     }
     const targetStudents = assignTargetStudentsMap[exam.id] || [];
-
     const newAssignment: Assignment = {
       id: Date.now(),
       title: `[보관함 출제] ${exam.title}`,
@@ -778,7 +782,7 @@ export default function SmartMathApp() {
       targetStudents: targetStudents
     };
     setAssignments(prev => [newAssignment, ...prev]);
-    alert(`"${exam.title}" 시험지가 ${targetStudents.length > 0 ? `${targetStudents.length}명의 지정 학생` : '전체 학생'} 과제로 부과되었습니다!`);
+    alert(`${exam.title} 시험지가 ${targetStudents.length > 0 ? `${targetStudents.length}명의 지정 학생` : '전체 학생'} 과제로 부과되었습니다!`);
   };
 
   // 교사: 과제 마감 기한 수정 기능
@@ -790,7 +794,7 @@ export default function SmartMathApp() {
 
   // 교사: 과제 삭제 기능
   const handleDeleteAssignment = (assignmentId: number, title: string) => {
-    if (confirm(`"${title}" 과제를 삭제하시겠습니까?`)) {
+    if (confirm(`${title} 과제를 삭제하시겠습니까?`)) {
       setAssignments(prev => prev.filter(a => a.id !== assignmentId));
       alert('과제가 삭제되었습니다.');
     }
@@ -823,6 +827,7 @@ export default function SmartMathApp() {
       alert('문제 지문(텍스트 또는 이미지 캡처)을 입력해 주세요.');
       return;
     }
+
     const newId = `problem_${Date.now()}`;
     const newProblem: Problem = {
       id: newId,
@@ -921,7 +926,6 @@ export default function SmartMathApp() {
     });
 
     const calculatedScore = Math.round((correctCount / (solvedProblems.length || 1)) * 100);
-
     const recordKey = activeAssignmentId
       ? `${activeAssignmentId}_${currentStudent.name}`
       : `practice_${Date.now()}_${currentStudent.name}`;
@@ -950,7 +954,7 @@ export default function SmartMathApp() {
   // AI 분리 캡처 처리
   const processMultiSegmentationAI = async () => {
     if (!aiProblemImage || !aiAnswerImage) {
-      alert('문제 캡처 이미지와 답지 캡처 이미지를 모두 붙여넣어 주세요.');
+      alert('문제 캡쳐 이미지와 답지 캡처 이미지를 모두 붙여넣어 주세요.');
       return;
     }
     setIsAnalyzing(true);
@@ -1035,6 +1039,7 @@ export default function SmartMathApp() {
       alert('조건에 맞는 문제가 없습니다. 다른 단원이나 전체 설정을 시도해보세요!');
       return;
     }
+
     setSolvedProblems(combined);
     setStudentAnswers({});
     setShowResult(false);
@@ -1064,22 +1069,22 @@ export default function SmartMathApp() {
   };
 
   const handleDownloadHWP = (title: string, probs: Problem[]) => {
-    let hwpContent = `========================================\n`;
-    hwpContent += `        ${title} (한글 HWP 텍스트 용)\n`;
-    hwpContent += `========================================\n\n`;
+    let hwpContent = "================================================\n";
+    hwpContent += `${title} (한글 HWP 텍스트 용)\n`;
+    hwpContent += "================================================\n\n";
 
     probs.forEach((p, idx) => {
       hwpContent += `[문제 ${idx + 1}] (${p.type === 'multiple' ? '객관식' : '주관식'}, 난이도: ${p.difficulty})\n`;
       hwpContent += `${p.content}\n`;
       if (p.type === 'multiple' && p.options) {
         p.options.forEach((opt, oIdx) => {
-          hwpContent += `   ${numIcons[oIdx]} ${opt}\n`;
+          hwpContent += `${numIcons[oIdx]} ${opt}\n`;
         });
       }
       hwpContent += `\n[정답] ${p.answer}\n`;
       if (p.explanation) hwpContent += `[해설] ${p.explanation}\n`;
       if (p.youtubeUrl) hwpContent += `[풀이 영상] ${p.youtubeUrl}\n`;
-      hwpContent += `----------------------------------------\n\n`;
+      hwpContent += "------------------------------------------------\n\n";
     });
 
     const blob = new Blob([hwpContent], { type: 'text/plain;charset=utf-8' });
@@ -1172,6 +1177,7 @@ export default function SmartMathApp() {
       }));
       setCurrentStroke(null);
     }
+
     if (activeTool === 'lasso') {
       if (isDraggingSelected) {
         setIsDraggingSelected(false);
@@ -1204,6 +1210,7 @@ export default function SmartMathApp() {
       for (let i = 1; i < st.points.length; i++) {
         ctx.lineTo(st.points[i].x, st.points[i].y);
       }
+
       if (st.tool === 'eraser') {
         ctx.globalCompositeOperation = 'destination-out';
         ctx.lineWidth = st.size;
@@ -1216,6 +1223,7 @@ export default function SmartMathApp() {
         ctx.lineWidth = st.size;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
+
         if (selectedStrokeIds.includes(st.id)) {
           ctx.shadowColor = '#3b82f6';
           ctx.shadowBlur = 12;
@@ -1259,6 +1267,190 @@ export default function SmartMathApp() {
   useEffect(() => {
     Object.keys(canvasRefs.current).forEach(id => redrawCanvas(id));
   }, [canvasStrokes, currentStroke, lassoPoints, selectedStrokeIds, activeTool, mousePos, penSize, eraserSize]);
+
+  // 교육과정 공통 필터 컴포넌트 (선생님/학생 공용)
+  const renderCurriculumFilter = () => (
+    <div className="mb-8 p-6 bg-slate-900/60 rounded-2xl border border-slate-800 print:hidden">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-2 text-indigo-400 font-semibold text-sm">
+          <Layers className="w-4 h-4" />
+          <span>2022 개정 교육과정 전체 체계</span>
+        </div>
+        <div className="flex bg-slate-800 p-1 rounded-lg border border-slate-700">
+          {['초등부', '중등부', '고등부', '모의고사 기출'].map((level) => (
+            <button
+              key={level}
+              onClick={() => {
+                setSelectedLevel(level);
+                setStep1(''); setStep2(''); setStep3(''); setStep4('');
+                setMockGrade(''); setMockYear(''); setMockMonth(''); setMockSubjectType('');
+              }}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                selectedLevel === level
+                  ? level === '모의고사 기출'
+                    ? 'bg-rose-600 text-white'
+                    : 'bg-indigo-600 text-white'
+                  : 'text-slate-400'
+              }`}
+            >
+              {level}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {selectedLevel !== '모의고사 기출' ? (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">
+              {selectedLevel === '고등부' ? '과목명' : '학년'}
+            </label>
+            <select
+              value={step1}
+              onChange={(e) => { setStep1(e.target.value); setStep2(''); setStep3(''); setStep4(''); }}
+              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
+            >
+              <option value="">-- 전체 --</option>
+              {step1Options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">
+              {selectedLevel === '고등부' ? '대단원' : '학기'}
+            </label>
+            <select
+              value={step2}
+              disabled={!step1}
+              onChange={(e) => { setStep2(e.target.value); setStep3(''); setStep4(''); }}
+              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white disabled:opacity-40"
+            >
+              <option value="">-- 전체 --</option>
+              {step2Options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">
+              {selectedLevel === '고등부' ? '중단원' : '대단원'}
+            </label>
+            <select
+              value={step3}
+              disabled={!step2}
+              onChange={(e) => { setStep3(e.target.value); setStep4(''); }}
+              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white disabled:opacity-40"
+            >
+              <option value="">-- 전체 --</option>
+              {step3Options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">소단원</label>
+            <select
+              value={step4}
+              disabled={!step3 || step4Options.length === 0}
+              onChange={(e) => setStep4(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white disabled:opacity-40"
+            >
+              <option value="">-- 전체 --</option>
+              {step4Options.map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
+            </select>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 bg-rose-950/20 p-4 rounded-xl border border-rose-900/40">
+          <div>
+            <label className="block text-xs text-rose-300 font-bold mb-1">1. 학년 선택</label>
+            <select
+              value={mockGrade}
+              onChange={(e) => {
+                setMockGrade(e.target.value);
+                setStep1(e.target.value);
+                setStep2(''); setStep3(''); setMockSubjectType('');
+              }}
+              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
+            >
+              <option value="">-- 학년 전체 --</option>
+              {MOCK_GRADES.map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-rose-300 font-bold mb-1">2. 기출 연도</label>
+            <select
+              value={mockYear}
+              onChange={(e) => setMockYear(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
+            >
+              <option value="">-- 연도 전체 --</option>
+              {EXAM_YEARS.map(yr => <option key={yr} value={yr}>{yr}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-rose-300 font-bold mb-1">3. 기출 월 선택</label>
+            <select
+              value={mockMonth}
+              disabled={!mockGrade}
+              onChange={(e) => {
+                setMockMonth(e.target.value);
+                setStep2(e.target.value);
+                setStep3(''); setMockSubjectType('');
+              }}
+              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white disabled:opacity-40"
+            >
+              <option value="">-- 월 전체 --</option>
+              {mockGrade && curriculumData['모의고사 기출']?.[mockGrade] ? (
+                Object.keys(curriculumData['모의고사 기출'][mockGrade]).map(m => (
+                  <option key={m} value={m}>{m}</option>
+                ))
+              ) : (
+                EXAM_MONTHS.map(m => <option key={m} value={m}>{m}</option>)
+              )}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-rose-300 font-bold mb-1">4. 공통/선택 구분</label>
+            <select
+              value={mockSubjectType}
+              disabled={!mockGrade || !mockMonth}
+              onChange={(e) => {
+                const val = e.target.value as '공통과목' | '선택과목' | '';
+                setMockSubjectType(val);
+                setStep3('');
+              }}
+              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white disabled:opacity-40"
+            >
+              <option value="">-- 전체 --</option>
+              {mockGrade && mockMonth && curriculumData['모의고사 기출']?.[mockGrade]?.[mockMonth] ? (
+                Object.keys(curriculumData['모의고사 기출'][mockGrade][mockMonth]).map(st => (
+                  <option key={st} value={st}>{st}</option>
+                ))
+              ) : null}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-rose-300 font-bold mb-1">5. 과목 선택</label>
+            <select
+              value={step3}
+              disabled={!mockGrade || !mockMonth}
+              onChange={(e) => setStep3(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white disabled:opacity-40"
+            >
+              <option value="">-- 과목 전체 --</option>
+              {mockGrade && mockMonth && curriculumData['모의고사 기출']?.[mockGrade]?.[mockMonth] ? (
+                mockSubjectType ? (
+                  (curriculumData['모의고사 기출'][mockGrade][mockMonth][mockSubjectType] || []).map((sub: string) => (
+                    <option key={sub} value={sub}>{sub}</option>
+                  ))
+                ) : (
+                  Object.values(curriculumData['모의고사 기출'][mockGrade][mockMonth]).flat().map((sub: any) => (
+                    <option key={sub} value={sub}>{sub}</option>
+                  ))
+                )
+              ) : null}
+            </select>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans print:bg-white print:text-black">
@@ -1509,7 +1701,6 @@ export default function SmartMathApp() {
                       onChange={(e) => setEditingProblem({ ...editingProblem, difficulty: e.target.value })}
                       className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
                     >
-                      <option value="하">하</option>
                       <option value="중">중</option>
                       <option value="상">상</option>
                       <option value="최상">최상</option>
@@ -1642,7 +1833,7 @@ export default function SmartMathApp() {
                       viewMode === 'dashboard' ? 'bg-indigo-600 text-white border-indigo-500 shadow' : 'bg-slate-950/60 text-slate-400 border-slate-800 hover:text-white'
                     }`}
                   >
-                    <LayoutDashboard className="w-4 h-4" />
+                    <BookOpen className="w-4 h-4" />
                     <span>문제 은행 ({problems.length})</span>
                   </button>
                   <button
@@ -1710,188 +1901,7 @@ export default function SmartMathApp() {
               </div>
 
               {/* 교육과정 선택 필터 영역 */}
-              {viewMode !== 'print' && (
-                <div className="mb-8 p-6 bg-slate-900/60 rounded-2xl border border-slate-800 print:hidden">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center space-x-2 text-indigo-400 font-semibold text-sm">
-                      <Layers className="w-4 h-4" />
-                      <span>2022 개정 교육과정 전체 체계</span>
-                    </div>
-                    <div className="flex bg-slate-800 p-1 rounded-lg border border-slate-700">
-                      {['초등부', '중등부', '고등부', '모의고사 기출'].map((level) => (
-                        <button
-                          key={level}
-                          onClick={() => {
-                            setSelectedLevel(level);
-                            setStep1(''); setStep2(''); setStep3(''); setStep4('');
-                            setMockGrade(''); setMockYear(''); setMockMonth(''); setMockSubjectType('');
-                          }}
-                          className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                            selectedLevel === level
-                              ? level === '모의고사 기출'
-                                ? 'bg-rose-600 text-white'
-                                : 'bg-indigo-600 text-white'
-                              : 'text-slate-400'
-                          }`}
-                        >
-                          {level}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {selectedLevel !== '모의고사 기출' ? (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      <div>
-                        <label className="block text-xs text-slate-400 mb-1">
-                          {selectedLevel === '고등부' ? '과목명' : '학년'}
-                        </label>
-                        <select
-                          value={step1}
-                          onChange={(e) => { setStep1(e.target.value); setStep2(''); setStep3(''); setStep4(''); }}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs"
-                        >
-                          <option value="">-- 전체 --</option>
-                          {step1Options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs text-slate-400 mb-1">
-                          {selectedLevel === '고등부' ? '대단원' : '학기'}
-                        </label>
-                        <select
-                          value={step2}
-                          disabled={!step1}
-                          onChange={(e) => { setStep2(e.target.value); setStep3(''); setStep4(''); }}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs disabled:opacity-40"
-                        >
-                          <option value="">-- 전체 --</option>
-                          {step2Options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs text-slate-400 mb-1">
-                          {selectedLevel === '고등부' ? '중단원' : '대단원'}
-                        </label>
-                        <select
-                          value={step3}
-                          disabled={!step2}
-                          onChange={(e) => { setStep3(e.target.value); setStep4(''); }}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs disabled:opacity-40"
-                        >
-                          <option value="">-- 전체 --</option>
-                          {step3Options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs text-slate-400 mb-1">소단원</label>
-                        <select
-                          value={step4}
-                          disabled={!step3 || step4Options.length === 0}
-                          onChange={(e) => setStep4(e.target.value)}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs disabled:opacity-40"
-                        >
-                          <option value="">-- 전체 --</option>
-                          {step4Options.map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
-                        </select>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3 bg-rose-950/20 p-4 rounded-xl border border-rose-900/40">
-                      <div>
-                        <label className="block text-xs text-rose-300 font-bold mb-1">1. 학년 선택</label>
-                        <select
-                          value={mockGrade}
-                          onChange={(e) => {
-                            setMockGrade(e.target.value);
-                            setStep1(e.target.value);
-                            setStep2(''); setStep3(''); setMockSubjectType('');
-                          }}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
-                        >
-                          <option value="">-- 학년 전체 --</option>
-                          {MOCK_GRADES.map(g => <option key={g} value={g}>{g}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs text-rose-300 font-bold mb-1">2. 기출 연도</label>
-                        <select
-                          value={mockYear}
-                          onChange={(e) => setMockYear(e.target.value)}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
-                        >
-                          <option value="">-- 연도 전체 --</option>
-                          {EXAM_YEARS.map(yr => <option key={yr} value={yr}>{yr}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs text-rose-300 font-bold mb-1">3. 기출 월 선택</label>
-                        <select
-                          value={mockMonth}
-                          disabled={!mockGrade}
-                          onChange={(e) => {
-                            setMockMonth(e.target.value);
-                            setStep2(e.target.value);
-                            setStep3(''); setMockSubjectType('');
-                          }}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white disabled:opacity-40"
-                        >
-                          <option value="">-- 월 전체 --</option>
-                          {mockGrade && curriculumData['모의고사 기출']?.[mockGrade] ? (
-                            Object.keys(curriculumData['모의고사 기출'][mockGrade]).map(m => (
-                              <option key={m} value={m}>{m}</option>
-                            ))
-                          ) : (
-                            EXAM_MONTHS.map(m => <option key={m} value={m}>{m}</option>)
-                          )}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs text-rose-300 font-bold mb-1">4. 공통/선택 구분</label>
-                        <select
-                          value={mockSubjectType}
-                          disabled={!mockGrade || !mockMonth}
-                          onChange={(e) => {
-                            const val = e.target.value as '공통과목' | '선택과목' | '';
-                            setMockSubjectType(val);
-                            setStep3('');
-                          }}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white disabled:opacity-40"
-                        >
-                          <option value="">-- 전체 --</option>
-                          {mockGrade && mockMonth && curriculumData['모의고사 기출']?.[mockGrade]?.[mockMonth] ? (
-                            Object.keys(curriculumData['모의고사 기출'][mockGrade][mockMonth]).map(st => (
-                              <option key={st} value={st}>{st}</option>
-                            ))
-                          ) : null}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs text-rose-300 font-bold mb-1">5. 과목 선택</label>
-                        <select
-                          value={step3}
-                          disabled={!mockGrade || !mockMonth}
-                          onChange={(e) => setStep3(e.target.value)}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white disabled:opacity-40"
-                        >
-                          <option value="">-- 과목 전체 --</option>
-                          {mockGrade && mockMonth && curriculumData['모의고사 기출']?.[mockGrade]?.[mockMonth] ? (
-                            mockSubjectType ? (
-                              (curriculumData['모의고사 기출'][mockGrade][mockMonth][mockSubjectType] || []).map((sub: string) => (
-                                <option key={sub} value={sub}>{sub}</option>
-                              ))
-                            ) : (
-                              Object.values(curriculumData['모의고사 기출'][mockGrade][mockMonth]).flat().map((sub: any) => (
-                                <option key={sub} value={sub}>{sub}</option>
-                              ))
-                            )
-                          ) : null}
-                        </select>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+              {viewMode !== 'print' && renderCurriculumFilter()}
 
               {/* 뷰 1: 등록 문제 대시보드 */}
               {viewMode === 'dashboard' && (
@@ -1908,7 +1918,7 @@ export default function SmartMathApp() {
                             {prob.level === '모의고사 기출' ? (
                               <span className="px-2.5 py-1 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-semibold rounded-md flex items-center gap-1">
                                 <FileQuestion className="w-3.5 h-3.5" />
-                                [{prob.mockGrade || prob.step1}] [{prob.mockYear}] [{prob.mockMonth || prob.step2}] {prob.subjectType && `[${prob.subjectType}]`} (난이도: {prob.difficulty})
+                                [{prob.mockGrade || prob.step1} {prob.mockYear}] [{prob.mockMonth || prob.step2}] {prob.subjectType && `[${prob.subjectType}]`} (난이도: {prob.difficulty})
                               </span>
                             ) : (
                               <span className="px-2.5 py-1 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold rounded-md">
@@ -1944,6 +1954,7 @@ export default function SmartMathApp() {
                             </button>
                           </div>
                         </div>
+
                         <h3 className="text-base font-bold pt-3">{prob.title}</h3>
                         {prob.contentImage ? (
                           <div className="mt-3 p-2 bg-slate-950 rounded-xl border border-slate-800">
@@ -1954,6 +1965,7 @@ export default function SmartMathApp() {
                             {prob.content}
                           </div>
                         )}
+
                         {prob.type === 'multiple' && prob.options && prob.options.length > 0 && (
                           <div className="mt-3 grid grid-cols-1 md:grid-cols-5 gap-2 text-xs">
                             {prob.options.map((opt, i) => (
@@ -1963,6 +1975,7 @@ export default function SmartMathApp() {
                             ))}
                           </div>
                         )}
+
                         <div className="mt-4 p-3 bg-slate-950/70 border border-slate-800 rounded-xl space-y-2 text-xs">
                           <div className="flex items-center space-x-2">
                             <span className="font-bold text-emerald-400">[정답]:</span>
@@ -2041,7 +2054,6 @@ export default function SmartMathApp() {
                           onChange={(e) => setManualDifficulty(e.target.value)}
                           className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
                         >
-                          <option value="하">하</option>
                           <option value="중">중</option>
                           <option value="상">상</option>
                           <option value="최상">최상</option>
@@ -2107,6 +2119,7 @@ export default function SmartMathApp() {
                           className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
                         />
                       </div>
+
                       <div
                         tabIndex={0}
                         onPaste={async (e) => {
@@ -2142,236 +2155,127 @@ export default function SmartMathApp() {
                       </div>
                     </div>
 
-                    <div className="p-4 bg-indigo-950/40 border border-indigo-800/50 rounded-xl space-y-3">
-                      <label className="flex items-center space-x-2 text-xs font-bold text-indigo-300 cursor-pointer">
+                    <div className="p-4 bg-indigo-950/30 border border-indigo-800/40 rounded-xl flex items-center justify-between">
+                      <div className="flex items-center gap-2">
                         <input
                           type="checkbox"
+                          id="directAssign"
                           checked={directAssign}
                           onChange={(e) => setDirectAssign(e.target.checked)}
-                          className="rounded bg-slate-950 border-slate-700"
+                          className="rounded bg-slate-950 border-slate-800 text-indigo-600"
                         />
-                        <span>제작과 동시에 답지/해설/유튜브 링크를 포함하여 학생 과제로 즉시 부과하기</span>
-                      </label>
+                        <label htmlFor="directAssign" className="text-xs text-indigo-200 font-semibold cursor-pointer">
+                          문제 저장과 동시에 학생 과제로 즉시 부여
+                        </label>
+                      </div>
                       {directAssign && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-slate-400">과제 제출 마감일:</span>
-                          <input
-                            type="date"
-                            value={directAssignDueDate}
-                            onChange={(e) => setDirectAssignDueDate(e.target.value)}
-                            className="bg-slate-950 border border-slate-800 rounded px-3 py-1 text-xs text-white"
-                          />
-                        </div>
+                        <input
+                          type="date"
+                          value={directAssignDueDate}
+                          onChange={(e) => setDirectAssignDueDate(e.target.value)}
+                          className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white"
+                        />
                       )}
                     </div>
 
                     <button
                       type="submit"
-                      className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 py-2.5 rounded-xl text-xs flex items-center space-x-2 shadow-lg"
+                      className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition-all shadow-lg flex items-center justify-center space-x-2"
                     >
                       <PlusCircle className="w-4 h-4" />
-                      <span>문제 제작 완료 및 저장</span>
+                      <span>신규 문제 제작 등록 완료</span>
                     </button>
                   </form>
                 </div>
               )}
 
-              {/* AI 캡처 자동 추출 */}
-              {viewMode === 'register_ai' && (
-                <div className="p-8 bg-gradient-to-br from-indigo-950/40 via-slate-900 to-slate-900 border border-indigo-500/30 rounded-2xl shadow-2xl space-y-6">
-                  <div className="flex items-center space-x-3 border-b border-slate-800 pb-4">
-                    <Sparkles className="w-6 h-6 text-indigo-400" />
-                    <div>
-                      <h2 className="text-base font-bold text-white">Gemini AI 자동 문제 답지 분리 캡처 & 1문항씩 자동 매칭 저장</h2>
-                      <p className="text-xs text-slate-400 mt-0.5">
-                        여러 문제가 포함된 화면에서 <span className="text-indigo-400 font-bold">문제 영역</span>과 <span className="text-emerald-400 font-bold">답지 영역</span>을 분리 캡처하여 붙여넣으세요. AI가 문항 번호를 파싱하여 자동으로 1번 문제-1번 답지 매칭을 완성합니다.
-                      </p>
-                    </div>
-                  </div>
-
-                  {isAnalyzing ? (
-                    <div className="py-12 flex flex-col items-center justify-center space-y-3 bg-slate-950/60 rounded-xl border border-slate-800">
-                      <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
-                      <p className="text-xs font-semibold text-slate-300">
-                        Gemini AI가 문제와 답지를 문항별로 분할 인식하여 일치시키는 중입니다...
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div
-                        tabIndex={0}
-                        onPaste={async (e) => {
-                          const img = await readPastedImage(e);
-                          if (img) setAiProblemImage(img);
-                        }}
-                        className="p-6 bg-slate-950/60 border-2 border-dashed border-indigo-500/40 hover:border-indigo-500 rounded-xl text-center space-y-3 focus:outline-none focus:border-indigo-400 shadow-xl"
-                      >
-                        <div className="flex items-center justify-center space-x-2 text-indigo-400 font-bold text-xs">
-                          <ImageIcon className="w-5 h-5" />
-                          <span>[1단계] 문제 캡처 붙여넣기 (Ctrl+V)</span>
-                        </div>
-                        <p className="text-[11px] text-slate-400">
-                          여러 객관식/주관식 문제가 들어있는 영역을 캡처한 후 클릭하여 <strong className="text-indigo-300">Ctrl+V</strong> 하세요.
-                        </p>
-                        {aiProblemImage ? (
-                          <div className="relative pt-2">
-                            <img src={aiProblemImage} alt="문제 캡처" className="max-h-56 mx-auto rounded border border-slate-700" />
-                            <button
-                              onClick={() => setAiProblemImage('')}
-                              className="mt-2 text-xs text-red-400 hover:underline"
-                            >
-                              이미지 삭제
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="py-8 text-slate-600 text-xs">캡처 이미지 대기 중...</div>
-                        )}
+              {/* 뷰 3: 자율 맞춤 출제 */}
+              {viewMode === 'generate_exam' && (
+                <div className="space-y-6">
+                  <div className="p-6 bg-slate-900 border border-slate-800 rounded-2xl space-y-4">
+                    <h2 className="text-base font-bold flex items-center space-x-2">
+                      <Sparkles className="w-5 h-5 text-indigo-400" />
+                      <span>조건별 자동 문제 추출 및 출제</span>
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs text-slate-400 mb-1">난이도 조건</label>
+                        <select
+                          value={teacherDiff}
+                          onChange={(e) => setTeacherDiff(e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
+                        >
+                          <option value="전체">전체 (혼합)</option>
+                          <option value="중">중</option>
+                          <option value="상">상</option>
+                          <option value="최상">최상</option>
+                        </select>
                       </div>
-
-                      <div
-                        tabIndex={0}
-                        onPaste={async (e) => {
-                          const img = await readPastedImage(e);
-                          if (img) setAiAnswerImage(img);
-                        }}
-                        className="p-6 bg-slate-950/60 border-2 border-dashed border-emerald-500/40 hover:border-emerald-500 rounded-xl text-center space-y-3 focus:outline-none focus:border-emerald-400 shadow-xl"
-                      >
-                        <div className="flex items-center justify-center space-x-2 text-emerald-400 font-bold text-xs">
-                          <CheckCircle2 className="w-5 h-5" />
-                          <span>[2단계] 정답/해설 캡쳐 붙여넣기 (Ctrl+V)</span>
-                        </div>
-                        <p className="text-[11px] text-slate-400">
-                          정답 및 상세해설이 들어있는 영역을 캡처한 후 클릭하여 <strong className="text-emerald-300">Ctrl+V</strong> 하세요.
-                        </p>
-                        {aiAnswerImage ? (
-                          <div className="relative pt-2">
-                            <img src={aiAnswerImage} alt="답지 캡처" className="max-h-56 mx-auto rounded border border-slate-700" />
-                            <button
-                              onClick={() => setAiAnswerImage('')}
-                              className="mt-2 text-xs text-red-400 hover:underline"
-                            >
-                              이미지 삭제
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="py-8 text-slate-600 text-xs">캡처 이미지 대기 중...</div>
-                        )}
+                      <div>
+                        <label className="block text-xs text-slate-400 mb-1">객관식 문항 수</label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={20}
+                          value={teacherMultCount}
+                          onChange={(e) => setTeacherMultCount(Number(e.target.value))}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-400 mb-1">주관식 문항 수</label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={20}
+                          value={teacherSubjCount}
+                          onChange={(e) => setTeacherSubjCount(Number(e.target.value))}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
+                        />
                       </div>
                     </div>
-                  )}
 
-                  {!isAnalyzing && (
                     <button
-                      onClick={processMultiSegmentationAI}
-                      className="w-full py-3.5 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 hover:from-indigo-500 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-2 shadow-lg"
+                      onClick={handleGenerateTeacherExam}
+                      className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition-all shadow-lg flex items-center justify-center space-x-2"
                     >
                       <Sparkles className="w-4 h-4" />
-                      <span>AI 자동 분석 및 문제 답지 매칭 저장 시작</span>
+                      <span>선택한 조건으로 문제셋 추출하기</span>
                     </button>
-                  )}
-                </div>
-              )}
-
-              {/* 교사: 자율 맞춤 시험지 출제 */}
-              {viewMode === 'generate_exam' && (
-                <div className="p-8 bg-slate-900/80 border border-slate-800 rounded-2xl shadow-xl space-y-6">
-                  <div className="border-b border-slate-800 pb-4">
-                    <h2 className="text-lg font-bold text-white flex items-center space-x-2">
-                      <FileSpreadsheet className="w-5 h-5 text-indigo-400" />
-                      <span>문제은행 저장 문제 기반 자율 맞춤 시험지 출제</span>
-                    </h2>
-                    <p className="text-xs text-slate-400 mt-1">
-                      상단의 2022 개정 교육과정 필터 및 아래 조건에 맞춰 문제은행에서 맞춤 문제셋을 자동 구성합니다.
-                    </p>
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="md:col-span-2">
-                      <label className="block text-xs font-bold text-slate-300 mb-1">시험지(문제셋) 제목 설정</label>
-                      <input
-                        type="text"
-                        placeholder={`예) ${currentYear}학년도 대수 중간고사 대비 단원평가`}
-                        value={generatedExamTitle}
-                        onChange={(e) => setGeneratedExamTitle(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-300 mb-1">난이도 조건</label>
-                      <select
-                        value={teacherDiff}
-                        onChange={(e) => setTeacherDiff(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white"
-                      >
-                        <option value="전체">전체 난이도</option>
-                        <option value="하">하</option>
-                        <option value="중">중</option>
-                        <option value="상">상</option>
-                        <option value="최상">최상</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-center justify-between bg-slate-900 p-3 rounded-lg border border-slate-800">
-                      <span className="text-xs font-semibold text-slate-300">객관식 지정 문항 수</span>
-                      <input
-                        type="number"
-                        min={0}
-                        max={50}
-                        value={teacherMultCount}
-                        onChange={(e) => setTeacherMultCount(Number(e.target.value))}
-                        className="w-20 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-right text-emerald-400 font-bold"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between bg-slate-900 p-3 rounded-lg border border-slate-800">
-                      <span className="text-xs font-semibold text-slate-300">주관식 지정 문항 수</span>
-                      <input
-                        type="number"
-                        min={0}
-                        max={50}
-                        value={teacherSubjCount}
-                        onChange={(e) => setTeacherSubjCount(Number(e.target.value))}
-                        className="w-20 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-right text-amber-400 font-bold"
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={handleGenerateTeacherExam}
-                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-2 shadow-lg"
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    <span>맞춤 시험지 추출 및 사전 구성</span>
-                  </button>
 
                   {currentGeneratedExam.length > 0 && (
-                    <div className="mt-8 pt-6 border-t border-slate-800 space-y-4">
-                      <div className="flex justify-between items-center">
-                        <h3 className="text-sm font-bold text-emerald-400 flex items-center gap-2">
-                          <CheckCircle className="w-4 h-4" />
-                          추출된 맞춤 문제 ({currentGeneratedExam.length}문항)
-                        </h3>
-                        <button
-                          onClick={handleSaveGeneratedExam}
-                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs flex items-center space-x-1 shadow"
-                        >
-                          <FolderKanban className="w-4 h-4" />
-                          <span>이 시험지를 출제 보관함에 저장하기</span>
-                        </button>
+                    <div className="p-6 bg-slate-900/90 border border-slate-800 rounded-2xl space-y-4">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+                        <div>
+                          <h3 className="text-sm font-bold text-white">추출 완료된 시험지 예시</h3>
+                          <p className="text-xs text-slate-400">총 {currentGeneratedExam.length}문항이 구성되었습니다.</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            placeholder="보관함 저장용 시험지 제목"
+                            value={generatedExamTitle}
+                            onChange={(e) => setGeneratedExamTitle(e.target.value)}
+                            className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
+                          />
+                          <button
+                            onClick={handleSaveGeneratedExam}
+                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg shadow"
+                          >
+                            출제 보관함에 저장
+                          </button>
+                        </div>
                       </div>
-                      <div className="space-y-3">
-                        {currentGeneratedExam.map((p, idx) => (
-                          <div key={p.id} className="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
-                            <div className="flex justify-between text-xs">
-                              <span className="font-bold text-slate-200">[{idx + 1}] {p.title}</span>
-                              <span className="text-slate-400">({p.type === 'subjective' ? '주관식' : '객관식'}) (난이도: {p.difficulty})</span>
+
+                      <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                        {currentGeneratedExam.map((prob, idx) => (
+                          <div key={prob.id} className="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="font-bold text-indigo-400">문제 {idx + 1} ({prob.type === 'multiple' ? '객관식' : '주관식'})</span>
+                              <span className="text-slate-400">난이도: {prob.difficulty}</span>
                             </div>
-                            {p.contentImage ? (
-                              <img src={p.contentImage} alt="문제" className="max-h-48 rounded" />
-                            ) : (
-                              <p className="text-xs text-slate-300 whitespace-pre-wrap">{p.content}</p>
-                            )}
+                            <p className="text-xs text-slate-200 whitespace-pre-wrap">{prob.content}</p>
                           </div>
                         ))}
                       </div>
@@ -2380,116 +2284,85 @@ export default function SmartMathApp() {
                 </div>
               )}
 
-              {/* 교사: 출제 보관함 및 과제 대상 개별 지정 */}
+              {/* 뷰 4: 출제 보관함 */}
               {viewMode === 'saved_exams' && (
-                <div className="p-8 bg-slate-900/80 border border-slate-800 rounded-2xl shadow-xl space-y-6">
-                  <div className="border-b border-slate-800 pb-4">
-                    <h2 className="text-lg font-bold text-white flex items-center space-x-2">
-                      <FolderKanban className="w-5 h-5 text-indigo-400" />
-                      <span>저장된 맞춤 시험지 보관함 & 개별 학생 과제 부과</span>
-                    </h2>
-                    <p className="text-xs text-slate-400 mt-1">
-                      자율 출제로 구성한 시험지를 보관하고, 특정 학생이나 전체 학생을 선택하여 마감일과 함께 과제로 즉시 전송합니다.
-                    </p>
-                  </div>
+                <div className="space-y-4">
+                  <h2 className="text-lg font-bold flex items-center space-x-2">
+                    <FolderKanban className="w-5 h-5 text-indigo-400" />
+                    <span>생성된 시험지 보관함 ({savedExams.length})</span>
+                  </h2>
 
                   {savedExams.length === 0 ? (
-                    <div className="py-12 text-center text-slate-500 text-xs">
-                      보관함에 저장된 시험지가 없습니다. &apos;자율 맞춤 시험지 출제&apos; 메뉴에서 새로운 시험지를 저장해보세요!
+                    <div className="p-12 text-center bg-slate-900 border border-slate-800 rounded-2xl text-slate-400 text-xs">
+                      저장된 시험지가 없습니다. [자율 맞춤 출제] 메뉴에서 시험지를 저장해 보세요!
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 gap-4">
+                    <div className="grid gap-4">
                       {savedExams.map((exam) => (
-                        <div key={exam.id} className="p-6 bg-slate-950 border border-slate-800 rounded-2xl space-y-4">
-                          <div className="flex flex-col md:flex-row justify-between md:items-center gap-2 border-b border-slate-800 pb-3">
+                        <div key={exam.id} className="p-6 bg-slate-900 border border-slate-800 rounded-2xl shadow-lg space-y-4">
+                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-800 pb-3">
                             <div>
-                              <span className="text-[10px] bg-indigo-900/60 text-indigo-300 px-2 py-0.5 rounded border border-indigo-700 mr-2">
-                                {exam.targetLevel}
-                              </span>
-                              <span className="text-sm font-bold text-white">{exam.title}</span>
-                              <span className="text-xs text-slate-500 ml-2">({exam.createdAt} 생성)</span>
+                              <h3 className="text-base font-bold text-white">{exam.title}</h3>
+                              <p className="text-xs text-slate-400">생성일: {exam.createdAt} | 문항 수: {exam.problems.length}문항 | 대상: {exam.targetLevel}</p>
                             </div>
-                            <div className="flex items-center gap-3">
-                              <span className="text-xs text-emerald-400 font-semibold">{exam.problems.length}개 문항</span>
+                            <div className="flex items-center gap-2">
                               <button
                                 onClick={() => {
                                   setSelectedExamToPrint(exam);
                                   setViewMode('print');
                                 }}
-                                className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-indigo-300 text-xs rounded border border-slate-700 flex items-center gap-1"
+                                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold flex items-center gap-1"
                               >
                                 <Printer className="w-3.5 h-3.5" />
                                 <span>인쇄하기</span>
                               </button>
                               <button
                                 onClick={() => handleDeleteSavedExam(exam.id, exam.title)}
-                                className="p-1 text-slate-500 hover:text-red-400"
-                                title="시험지 삭제"
+                                className="p-1.5 text-slate-400 hover:text-rose-400"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-                            {exam.problems.map((prob, idx) => (
-                              <div key={prob.id} className="p-2.5 bg-slate-900/80 rounded-lg border border-slate-800 text-slate-300">
-                                <span className="font-bold text-indigo-400">{idx + 1}.</span> {prob.title}
+                          <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-3">
+                            <span className="text-xs font-bold text-indigo-300 block">학생 과제 부여 설정</span>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
+                              <div>
+                                <label className="block text-[11px] text-slate-400 mb-1">마감 기한 설정</label>
+                                <input
+                                  type="date"
+                                  value={assignDueDateMap[exam.id] || ''}
+                                  onChange={(e) => setAssignDueDateMap({ ...assignDueDateMap, [exam.id]: e.target.value })}
+                                  className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white"
+                                />
                               </div>
-                            ))}
-                          </div>
-
-                          {/* 과제 부여 학생 지정 섹션 */}
-                          <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 space-y-2">
-                            <span className="text-xs font-bold text-slate-300 block">과제 부여 대상 학생 선택 (선택 안함 시 전체 부여):</span>
-                            <div className="flex flex-wrap gap-3">
-                              {allowedStudents.map(st => {
-                                const selectedList = assignTargetStudentsMap[exam.id] || [];
-                                const isChecked = selectedList.includes(st.id);
-                                return (
-                                  <label key={st.id} className="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer">
-                                    <input
-                                      type="checkbox"
-                                      checked={isChecked}
-                                      onChange={(e) => {
-                                        const currentMap = assignTargetStudentsMap[exam.id] || [];
-                                        let updated: number[];
-                                        if (e.target.checked) {
-                                          updated = [...currentMap, st.id];
-                                        } else {
-                                          updated = currentMap.filter(id => id !== st.id);
-                                        }
-                                        setAssignTargetStudentsMap({
-                                          ...assignTargetStudentsMap,
-                                          [exam.id]: updated
-                                        });
-                                      }}
-                                      className="rounded bg-slate-950 border-slate-700 text-indigo-600 focus:ring-0"
-                                    />
-                                    <span>{st.name} ({st.phone.slice(-4)})</span>
-                                  </label>
-                                );
-                              })}
+                              <div>
+                                <label className="block text-[11px] text-slate-400 mb-1">대상 학생 선택 (미선택 시 전체)</label>
+                                <select
+                                  multiple
+                                  value={(assignTargetStudentsMap[exam.id] || []).map(String)}
+                                  onChange={(e) => {
+                                    const selected = Array.from(e.target.selectedOptions, opt => Number(opt.value));
+                                    setAssignTargetStudentsMap({ ...assignTargetStudentsMap, [exam.id]: selected });
+                                  }}
+                                  className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs text-white h-16"
+                                >
+                                  {allowedStudents.map(st => (
+                                    <option key={st.id} value={st.id}>{st.name} ({st.phone.slice(-4)})</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div>
+                                <button
+                                  onClick={() => handleAssignExamToStudents(exam)}
+                                  className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs shadow flex items-center justify-center space-x-1"
+                                >
+                                  <Send className="w-3.5 h-3.5" />
+                                  <span>선택 과제 학생 부과</span>
+                                </button>
+                              </div>
                             </div>
-                          </div>
-
-                          <div className="pt-3 border-t border-slate-800/80 flex flex-col md:flex-row items-stretch md:items-center justify-end gap-3">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-slate-400">과제 마감일:</span>
-                              <input
-                                type="date"
-                                value={assignDueDateMap[exam.id] || ''}
-                                onChange={(e) => setAssignDueDateMap({ ...assignDueDateMap, [exam.id]: e.target.value })}
-                                className="bg-slate-900 border border-slate-700 rounded px-2.5 py-1 text-xs text-white"
-                              />
-                            </div>
-                            <button
-                              onClick={() => handleAssignExamToStudents(exam)}
-                              className="px-5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs flex items-center justify-center space-x-1 shadow"
-                            >
-                              <Send className="w-3.5 h-3.5" />
-                              <span>학생 과제로 부과하기</span>
-                            </button>
                           </div>
                         </div>
                       ))}
@@ -2498,124 +2371,114 @@ export default function SmartMathApp() {
                 </div>
               )}
 
-              {/* 교사: 학생 인가 및 과제 대시보드 */}
+              {/* 뷰 5: 학생 과제 대시보드 */}
               {viewMode === 'assignment_manage' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* 학생 승인 및 관리 */}
-                  <div className="p-6 bg-slate-900/80 border border-slate-800 rounded-2xl shadow-xl space-y-4">
-                    <h3 className="text-base font-bold text-white flex items-center gap-2">
-                      <User className="w-5 h-5 text-indigo-400" /> 학생 인가 등록 (비밀번호 지정 & 퇴원 승인 취소)
-                    </h3>
-                    <div className="space-y-3">
+                <div className="space-y-8">
+                  <div className="p-6 bg-slate-900 border border-slate-800 rounded-2xl space-y-4">
+                    <h2 className="text-base font-bold flex items-center space-x-2 text-white">
+                      <User className="w-5 h-5 text-indigo-400" />
+                      <span>인가 학생 명단 및 접근 승인 관리</span>
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       <input
                         type="text"
-                        placeholder="학생 이름 (예: 김철수)"
+                        placeholder="학생 이름"
                         value={newStudentName}
                         onChange={(e) => setNewStudentName(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
+                        className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
                       />
                       <input
                         type="text"
-                        placeholder="전체 전화번호 (예: 01012345678)"
+                        placeholder="전화번호 (예: 01012345678)"
                         value={newStudentPhone}
                         onChange={(e) => setNewStudentPhone(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
+                        className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
                       />
                       <button
                         onClick={handleAddStudent}
-                        className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold"
+                        className="py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs shadow"
                       >
-                        학생 승인 추가
+                        신규 학생 승인 등록
                       </button>
                     </div>
 
-                    <div className="pt-2 border-t border-slate-800 divide-y divide-slate-800 text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2">
                       {allowedStudents.map(st => (
-                        <div key={st.id} className="py-2.5 flex justify-between items-center text-slate-300">
+                        <div key={st.id} className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between">
                           <div>
-                            <span className="font-bold text-white mr-2">{st.name}</span>
-                            <span className="text-slate-500">{st.phone} (PW: {st.phone.slice(-4)})</span>
+                            <span className="font-bold text-xs text-white block">{st.name}</span>
+                            <span className="text-[11px] text-slate-400">{st.phone}</span>
                           </div>
                           <button
                             onClick={() => handleRemoveStudent(st.id, st.name)}
-                            className="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded flex items-center gap-1 text-[11px] font-semibold transition-colors"
-                            title="퇴원 처리 및 승인 취소"
+                            className="p-1 text-slate-500 hover:text-rose-400"
+                            title="퇴원 처리"
                           >
-                            <UserX className="w-3.5 h-3.5" />
-                            <span>퇴원(취소)</span>
+                            <UserX className="w-4 h-4" />
                           </button>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  {/* 과제 관리 및 실시간 제출 현황 */}
-                  <div className="p-6 bg-slate-900/80 border border-slate-800 rounded-2xl shadow-xl space-y-4">
-                    <h3 className="text-base font-bold text-white flex items-center gap-2">
-                      <Calendar className="w-5 h-5 text-indigo-400" /> 과제 부과 & 실시간 제출 현황 & 마감기간 수정
-                    </h3>
-                    <div className="space-y-4 max-h-[600px] overflow-y-auto pr-1">
+                  <div className="p-6 bg-slate-900 border border-slate-800 rounded-2xl space-y-4">
+                    <h2 className="text-base font-bold flex items-center space-x-2 text-white">
+                      <ClipboardList className="w-5 h-5 text-indigo-400" />
+                      <span>부과된 과제 리스트 및 제출 현황</span>
+                    </h2>
+
+                    <div className="grid gap-4">
                       {assignments.map(asg => (
-                        <div key={asg.id} className="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-3 text-xs">
-                          <div className="flex justify-between items-start">
+                        <div key={asg.id} className="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-3">
+                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-800 pb-2">
                             <div>
-                              <h4 className="font-bold text-white text-sm">{asg.title}</h4>
-                              <p className="text-slate-400 text-[11px] mt-0.5">
-                                대상: {asg.targetStudents && asg.targetStudents.length > 0 ? `${asg.targetStudents.length}명 선택 지정` : '전체 학생'} | 문항 수: {asg.problemIds.length}개
-                              </p>
+                              <h3 className="text-sm font-bold text-white">{asg.title}</h3>
+                              <p className="text-xs text-slate-400">마감일: {asg.dueDate} | 문항 수: {asg.problemIds.length}개</p>
                             </div>
-                            <button
-                              onClick={() => handleDeleteAssignment(asg.id, asg.title)}
-                              className="text-slate-500 hover:text-red-400 p-1"
-                              title="과제 삭제"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="date"
+                                value={asg.dueDate}
+                                onChange={(e) => handleUpdateAssignmentDueDate(asg.id, e.target.value)}
+                                className="bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-white"
+                              />
+                              <button
+                                onClick={() => handleDeleteAssignment(asg.id, asg.title)}
+                                className="p-1 text-slate-400 hover:text-rose-400"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           </div>
 
-                          <div className="flex items-center gap-2 bg-slate-900 p-2 rounded-lg border border-slate-800">
-                            <span className="text-slate-400">마감 기한:</span>
-                            <input
-                              type="date"
-                              value={asg.dueDate}
-                              onChange={(e) => handleUpdateAssignmentDueDate(asg.id, e.target.value)}
-                              className="bg-slate-950 border border-slate-700 rounded px-2 py-0.5 text-xs text-white"
-                            />
-                          </div>
-
-                          <div className="space-y-1.5 pt-1">
-                            <span className="font-bold text-indigo-300 block">학생 제출 및 채점 결과:</span>
-                            {allowedStudents.map(st => {
-                              const subKey = `${asg.id}_${st.name}`;
-                              const subRecord = submissions[subKey];
-                              return (
-                                <div key={st.id} className="flex justify-between items-center bg-slate-900/50 px-2.5 py-1.5 rounded text-[11px]">
-                                  <span>{st.name}</span>
-                                  {subRecord ? (
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-emerald-400 font-bold">{subRecord.score}점</span>
-                                      <span className="text-slate-500">({subRecord.submittedAt})</span>
+                          <div className="space-y-2">
+                            <span className="text-[11px] font-bold text-slate-400 block">학생별 제출 상태:</span>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                              {allowedStudents.map(st => {
+                                const subKey = `${asg.id}_${st.name}`;
+                                const record = submissions[subKey];
+                                return (
+                                  <div key={st.id} className="p-2.5 bg-slate-900 rounded-lg border border-slate-800 flex items-center justify-between text-xs">
+                                    <span>{st.name}</span>
+                                    {record ? (
                                       <button
-                                        onClick={() => {
-                                          const asgProbs = problems.filter(p => asg.problemIds.includes(p.id));
-                                          setViewingSubmission({
-                                            studentName: st.name,
-                                            assignmentTitle: asg.title,
-                                            record: subRecord,
-                                            problems: asgProbs
-                                          });
-                                        }}
-                                        className="text-indigo-400 hover:underline flex items-center gap-0.5"
+                                        onClick={() => setViewingSubmission({
+                                          studentName: st.name,
+                                          assignmentTitle: asg.title,
+                                          record: record,
+                                          problems: record.problems || problems.filter(p => asg.problemIds.includes(p.id))
+                                        })}
+                                        className="px-2 py-1 bg-emerald-500/20 text-emerald-400 rounded border border-emerald-500/30 font-bold hover:bg-emerald-500/30"
                                       >
-                                        <Eye className="w-3 h-3" /> 상세
+                                        제출됨 ({record.score}점)
                                       </button>
-                                    </div>
-                                  ) : (
-                                    <span className="text-rose-400 font-medium">미제출</span>
-                                  )}
-                                </div>
-                              );
-                            })}
+                                    ) : (
+                                      <span className="px-2 py-1 bg-slate-800 text-slate-500 rounded text-[11px]">미제출</span>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -2624,89 +2487,149 @@ export default function SmartMathApp() {
                 </div>
               )}
 
-              {/* 교사 인쇄 전용 뷰 (Saved Exams & 문제 은행 통합 인쇄) */}
-              {viewMode === 'print' && (
-                <div className="bg-white text-black p-8 rounded-2xl shadow-2xl space-y-6 print:p-0">
-                  <div className="flex justify-between items-center border-b border-gray-300 pb-4 print:hidden">
-                    <div>
-                      <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                        <Printer className="w-6 h-6 text-indigo-600" /> 시험지 인쇄 / PDF 저장 / 한글 파일 다운로드
-                      </h2>
-                      <p className="text-xs text-gray-600 mt-1">
-                        출제 보관함에 저장된 시험지를 선택하여 바로 출력할 수 있습니다.
-                      </p>
+              {/* 제출 상세보기 모달 */}
+              {viewingSubmission && (
+                <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+                  <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl max-w-3xl w-full space-y-4 shadow-2xl my-8">
+                    <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                      <div>
+                        <h3 className="text-base font-bold text-white">{viewingSubmission.studentName} 학생 제출 답안</h3>
+                        <p className="text-xs text-slate-400">{viewingSubmission.assignmentTitle} | 제출일시: {viewingSubmission.record.submittedAt}</p>
+                      </div>
+                      <button onClick={() => setViewingSubmission(null)} className="text-slate-400 hover:text-white">
+                        <X className="w-5 h-5" />
+                      </button>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                      <select
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          if (!val) {
-                            setSelectedExamToPrint(null);
-                          } else {
-                            const found = savedExams.find(ex => ex.id === val);
-                            setSelectedExamToPrint(found || null);
-                          }
-                        }}
-                        className="bg-gray-100 border border-gray-300 text-xs font-bold text-gray-800 rounded px-3 py-2"
-                      >
-                        <option value="">-- [기본] 문제 은행 전체/필터 문제 인쇄 --</option>
-                        {savedExams.map(ex => (
-                          <option key={ex.id} value={ex.id}>
-                            [보관함] {ex.title} ({ex.problems.length}문항)
-                          </option>
-                        ))}
-                      </select>
+                    <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+                      {viewingSubmission.problems.map((prob, idx) => {
+                        const studentAns = viewingSubmission.record.answers[prob.id] || '미답변';
+                        const isCorrect = studentAns.trim().toLowerCase() === (prob.answer || '').trim().toLowerCase();
+                        return (
+                          <div key={prob.id} className="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-indigo-300">문제 {idx + 1}</span>
+                              <span className={`px-2 py-0.5 rounded text-xs font-bold ${isCorrect ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
+                                {isCorrect ? '정답' : '오답'}
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-200 whitespace-pre-wrap">{prob.content}</p>
+                            <div className="pt-2 border-t border-slate-800/80 grid grid-cols-2 text-xs gap-2">
+                              <div><span className="text-slate-400">학생 답안:</span> <strong className="text-white">{studentAns}</strong></div>
+                              <div><span className="text-slate-400">실제 정답:</span> <strong className="text-emerald-400">{prob.answer}</strong></div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
 
+              {/* 뷰 6: AI 캡처 추출 */}
+              {viewMode === 'register_ai' && (
+                <div className="p-8 bg-slate-900 border border-slate-800 rounded-2xl space-y-6">
+                  <div className="space-y-2">
+                    <h2 className="text-base font-bold text-white flex items-center space-x-2">
+                      <Sparkles className="w-5 h-5 text-indigo-400" />
+                      <span>AI 문제 & 답지 분리 캡처 자동 매칭 추출</span>
+                    </h2>
+                    <p className="text-xs text-slate-400">문제 이미지와 답안지 이미지를 각각 붙여넣으시면 AI가 개별 문제와 정답/해설을 파싱하여 자동 저장합니다.</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div
+                      tabIndex={0}
+                      onPaste={async (e) => {
+                        const img = await readPastedImage(e);
+                        if (img) setAiProblemImage(img);
+                      }}
+                      className="p-6 bg-slate-950 rounded-2xl border-2 border-dashed border-indigo-500/40 text-center space-y-3 focus:outline-none focus:border-indigo-400"
+                    >
+                      <ImageIcon className="w-8 h-8 text-indigo-400 mx-auto" />
+                      <span className="block text-xs text-slate-300 font-bold">1. 문제지 영역 캡처 후 Ctrl + V</span>
+                      {aiProblemImage && (
+                        <div className="pt-2">
+                          <img src={aiProblemImage} alt="문제 캡처" className="max-h-48 mx-auto rounded border border-slate-800" />
+                          <button onClick={() => setAiProblemImage('')} className="mt-2 text-xs text-rose-400 hover:underline">삭제</button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div
+                      tabIndex={0}
+                      onPaste={async (e) => {
+                        const img = await readPastedImage(e);
+                        if (img) setAiAnswerImage(img);
+                      }}
+                      className="p-6 bg-slate-950 rounded-2xl border-2 border-dashed border-emerald-500/40 text-center space-y-3 focus:outline-none focus:border-emerald-400"
+                    >
+                      <ImageIcon className="w-8 h-8 text-emerald-400 mx-auto" />
+                      <span className="block text-xs text-slate-300 font-bold">2. 정답/해설지 영역 캡처 후 Ctrl + V</span>
+                      {aiAnswerImage && (
+                        <div className="pt-2">
+                          <img src={aiAnswerImage} alt="답지 캡처" className="max-h-48 mx-auto rounded border border-slate-800" />
+                          <button onClick={() => setAiAnswerImage('')} className="mt-2 text-xs text-rose-400 hover:underline">삭제</button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={processMultiSegmentationAI}
+                    disabled={isAnalyzing}
+                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs shadow flex items-center justify-center space-x-2 disabled:opacity-50"
+                  >
+                    {isAnalyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                    <span>AI 자동 자동 분리 추출 시작</span>
+                  </button>
+                </div>
+              )}
+
+              {/* 뷰 7: 인쇄 모드 */}
+              {viewMode === 'print' && (
+                <div className="space-y-6">
+                  <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between print:hidden">
+                    <span className="text-xs text-slate-300 font-bold">인쇄용 시험지 미리보기</span>
+                    <div className="flex items-center gap-2">
                       <button
-                        onClick={() => {
-                          const probsToPrint = selectedExamToPrint ? selectedExamToPrint.problems : problems;
-                          const titleToPrint = selectedExamToPrint ? selectedExamToPrint.title : examTitle;
-                          handleDownloadHWP(titleToPrint, probsToPrint);
-                        }}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-xs flex items-center gap-1 shadow"
+                        onClick={() => handleDownloadHWP(selectedExamToPrint?.title || examTitle, selectedExamToPrint?.problems || problems)}
+                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold flex items-center gap-1"
                       >
-                        <FileDown className="w-4 h-4" />
-                        <span>HWP 다운로드</span>
+                        <FileDown className="w-3.5 h-3.5" /> HWP 다운로드
                       </button>
-
                       <button
                         onClick={handlePrintWindow}
-                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs flex items-center gap-1 shadow"
+                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold flex items-center gap-1"
                       >
-                        <Printer className="w-4 h-4" />
-                        <span>PDF / 인쇄하기</span>
+                        <Printer className="w-3.5 h-3.5" /> 인쇄하기
                       </button>
                     </div>
                   </div>
 
-                  {/* 인쇄될 본문 미리보기 및 출력 영억 */}
-                  <div className="print-area space-y-6">
-                    <div className="text-center border-b-2 border-black pb-4">
-                      <h1 className="text-2xl font-black">{selectedExamToPrint ? selectedExamToPrint.title : examTitle}</h1>
-                      <div className="flex justify-between items-center text-xs mt-3 px-2 font-bold">
-                        <span>과목/단원: {selectedExamToPrint ? selectedExamToPrint.targetLevel : `${selectedLevel} ${step1}`}</span>
-                        <span>성명: ____________________</span>
-                        <span>점수: ____________ / 100점</span>
+                  <div className="bg-white text-black p-8 rounded-xl space-y-6 print:p-0">
+                    <div className="text-center border-b-2 border-black pb-4 space-y-1">
+                      <h1 className="text-2xl font-black">{selectedExamToPrint?.title || examTitle}</h1>
+                      <div className="flex justify-between text-xs pt-2 font-bold">
+                        <span>과목: {selectedLevel}</span>
+                        <span>성명: __________________</span>
+                        <span>점수: _________</span>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 print:grid-cols-2 print:gap-6">
-                      {(selectedExamToPrint ? selectedExamToPrint.problems : problems).map((p, idx) => (
-                        <div key={p.id} className="border-b border-gray-200 pb-4 space-y-2 break-inside-avoid">
-                          <div className="font-bold text-sm flex justify-between">
-                            <span>[{idx + 1}] {p.title}</span>
-                            <span className="text-xs text-gray-500">({p.type === 'multiple' ? '객관식' : '주관식'}, 난이도:{p.difficulty})</span>
+                    <div className="grid grid-cols-1 gap-8">
+                      {(selectedExamToPrint?.problems || problems).map((prob, idx) => (
+                        <div key={prob.id} className="space-y-2">
+                          <div className="font-bold text-sm">
+                            {idx + 1}. {prob.content}
                           </div>
-                          {p.contentImage ? (
-                            <img src={p.contentImage} alt="문제지문" className="max-h-48 my-2" />
-                          ) : (
-                            <p className="text-xs whitespace-pre-wrap leading-relaxed">{p.content}</p>
+                          {prob.contentImage && (
+                            <img src={prob.contentImage} alt="문제" className="max-h-60 my-2" />
                           )}
-                          {p.type === 'multiple' && p.options && (
-                            <div className="grid grid-cols-1 gap-1 text-xs pt-1">
-                              {p.options.map((opt, i) => (
-                                <div key={i}>{numIcons[i]} {opt}</div>
+                          {prob.type === 'multiple' && prob.options && (
+                            <div className="grid grid-cols-5 gap-2 text-xs pt-2">
+                              {prob.options.map((opt, oIdx) => (
+                                <div key={oIdx}>{numIcons[oIdx]} {opt}</div>
                               ))}
                             </div>
                           )}
@@ -2723,492 +2646,408 @@ export default function SmartMathApp() {
         {/* 학생 모드 */}
         {roleMode === 'student' && (
           !isAuthenticated ? (
-            /* 학생 로그인 폼 */
             <div className="p-8 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl max-w-md mx-auto space-y-6 my-16">
               <div className="text-center space-y-2">
                 <div className="w-14 h-14 bg-emerald-500/10 text-emerald-400 rounded-2xl flex items-center justify-center mx-auto border border-emerald-500/20 shadow-inner">
-                  <GraduationCap className="w-7 h-7" />
+                  <User className="w-7 h-7" />
                 </div>
-                <h2 className="text-xl font-bold text-white">학생 스마트 학습 접속</h2>
-                <p className="text-xs text-slate-400">선생님에게 승인받은 이름과 전화번호 뒤 4자리를 입력하세요.</p>
+                <h2 className="text-xl font-bold text-white">학생 스마트 로그인</h2>
+                <p className="text-xs text-slate-400">선생님이 승인한 이름과 전화번호 뒤 4자리를 입력하세요.</p>
               </div>
+
               <form onSubmit={handleStudentLogin} className="space-y-4">
-                <input
-                  type="text"
-                  placeholder="학생 이름 (예: 김철수)"
-                  value={loginName}
-                  onChange={(e) => setLoginName(e.target.value)}
-                  required
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
-                />
-                <input
-                  type="password"
-                  placeholder="전화번호 뒤 4자리 (예: 5678)"
-                  value={loginPhoneLast4}
-                  onChange={(e) => setLoginPhoneLast4(e.target.value)}
-                  required
-                  maxLength={4}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
-                />
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">학생 이름</label>
+                  <input
+                    type="text"
+                    placeholder="이름 입력 (예: 김철수)"
+                    value={loginName}
+                    onChange={(e) => setLoginName(e.target.value)}
+                    required
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">전화번호 뒤 4자리</label>
+                  <input
+                    type="password"
+                    maxLength={4}
+                    placeholder="뒤 4자리 (예: 5678)"
+                    value={loginPhoneLast4}
+                    onChange={(e) => setLoginPhoneLast4(e.target.value)}
+                    required
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
                 {loginError && <p className="text-xs text-rose-400 font-medium text-center">{loginError}</p>}
                 <button
                   type="submit"
                   className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition-all shadow-lg"
                 >
-                  학생 접속 승인
+                  학생 로그인
                 </button>
               </form>
             </div>
           ) : (
-            <div>
-              {/* 학생 메인 탭 및 인쇄 기능 */}
-              <div className="mb-6 flex flex-col md:flex-row justify-between items-center gap-4 bg-slate-900 p-4 rounded-xl border border-slate-800 print:hidden">
-                <div className="flex items-center space-x-2">
-                  <span className="text-xs text-slate-400">접속한 학생:</span>
-                  <span className="text-sm font-bold text-emerald-400">{currentStudent?.name} 학생</span>
+            <div className="space-y-6">
+              <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800 flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
+                    <User className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="font-bold text-sm text-white block">{currentStudent?.name} 학생</span>
+                    <span className="text-[11px] text-slate-400">접속 중인 디바이스 스마트 문제풀이 모드</span>
+                  </div>
                 </div>
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => { setStudentTab('practice'); setStudentSolving(false); }}
-                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                      studentTab === 'practice' ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400'
-                    }`}
-                  >
-                    자율 맞춤 문제 풀이
-                  </button>
-                  <button
-                    onClick={() => { setStudentTab('assignment'); setStudentSolving(false); }}
-                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                      studentTab === 'assignment' ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400'
-                    }`}
-                  >
-                    부여된 과제 목록
-                  </button>
-                  <button
-                    onClick={() => { setStudentTab('history'); setStudentSolving(false); }}
-                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                      studentTab === 'history' ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400'
-                    }`}
-                  >
-                    지난 제출 & 오답 복습
-                  </button>
-                </div>
+                <button
+                  onClick={() => {
+                    setIsAuthenticated(false);
+                    setCurrentStudent(null);
+                  }}
+                  className="text-xs text-slate-400 hover:text-white"
+                >
+                  로그아웃
+                </button>
               </div>
 
-              {/* 탭 1: 자율 맞춤 문제 풀이 설정 */}
-              {studentTab === 'practice' && !studentSolving && (
-                <div className="p-8 bg-slate-900/80 border border-slate-800 rounded-2xl shadow-xl space-y-6">
-                  <h2 className="text-base font-bold text-white flex items-center space-x-2">
-                    <Sparkles className="w-5 h-5 text-emerald-400" />
-                    <span>자율 맞춤 문제 추출 설정</span>
-                  </h2>
+              {!studentSolving ? (
+                <div className="space-y-6">
+                  <div className="flex bg-slate-900 p-1.5 rounded-xl border border-slate-800">
+                    <button
+                      onClick={() => setStudentTab('practice')}
+                      className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all ${
+                        studentTab === 'practice' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      자율 맞춤 문제 풀기
+                    </button>
+                    <button
+                      onClick={() => setStudentTab('assignment')}
+                      className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all ${
+                        studentTab === 'assignment' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      선생님 부여 과제함
+                    </button>
+                    <button
+                      onClick={() => setStudentTab('history')}
+                      className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all ${
+                        studentTab === 'history' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      나의 제출 오답노트
+                    </button>
+                  </div>
 
-                  {/* =========================================================================
-   [수정 2] 학생용 자율 맞춤 문제 추출 - 단원 선택 및 문제 간격 설정 UI 추가
-   ========================================================================= */}
-<div className="p-6 bg-slate-900/80 border border-slate-800 rounded-2xl space-y-4">
-  <h3 className="text-sm font-bold text-emerald-400 flex items-center gap-2">
-    <Sparkles className="w-4 h-4" /> 자율 맞춤 문제 추출 설정
-  </h3>
+                  {studentTab === 'practice' && (
+                    <div className="space-y-6">
+                      {/* 교사용과 동일한 교육과정 선택 필터 영역 추가 */}
+                      {renderCurriculumFilter()}
 
-  {/* 2-1. 단원 선택 드롭다운 (교사용 필터 연동) */}
-  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-slate-950 p-4 rounded-xl border border-slate-800">
-    <div>
-      <label className="block text-[11px] text-slate-400 mb-1">
-        {selectedLevel === '고등부' ? '과목명' : '학년'}
-      </label>
-      <select
-        value={step1}
-        onChange={(e) => { setStep1(e.target.value); setStep2(''); setStep3(''); setStep4(''); }}
-        className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white"
-      >
-        <option value="">-- 전체 --</option>
-        {step1Options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-      </select>
-    </div>
+                      <div className="p-6 bg-slate-900 border border-slate-800 rounded-2xl space-y-4">
+                        <h2 className="text-base font-bold text-white flex items-center space-x-2">
+                          <Sparkles className="w-5 h-5 text-emerald-400" />
+                          <span>자율 맞춤 출제 난이도 및 문항 설정</span>
+                        </h2>
 
-    <div>
-      <label className="block text-[11px] text-slate-400 mb-1">
-        {selectedLevel === '고등부' ? '대단원' : '학기'}
-      </label>
-      <select
-        value={step2}
-        disabled={!step1}
-        onChange={(e) => { setStep2(e.target.value); setStep3(''); setStep4(''); }}
-        className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white disabled:opacity-40"
-      >
-        <option value="">-- 전체 --</option>
-        {step2Options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-      </select>
-    </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <label className="block text-xs text-slate-400 mb-1">난이도</label>
+                            <select
+                              value={studentDiff}
+                              onChange={(e) => setStudentDiff(e.target.value)}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
+                            >
+                              <option value="전체">전체 (혼합)</option>
+                              <option value="중">중</option>
+                              <option value="상">상</option>
+                              <option value="최상">최상</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs text-slate-400 mb-1">객관식 개수</label>
+                            <input
+                              type="number"
+                              min={0}
+                              max={10}
+                              value={multipleCount}
+                              onChange={(e) => setMultipleCount(Number(e.target.value))}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-slate-400 mb-1">주관식 개수</label>
+                            <input
+                              type="number"
+                              min={0}
+                              max={10}
+                              value={subjectiveCount}
+                              onChange={(e) => setSubjectiveCount(Number(e.target.value))}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
+                            />
+                          </div>
+                        </div>
 
-    <div>
-      <label className="block text-[11px] text-slate-400 mb-1">
-        {selectedLevel === '고등부' ? '중단원' : '대단원'}
-      </label>
-      <select
-        value={step3}
-        disabled={!step2}
-        onChange={(e) => { setStep3(e.target.value); setStep4(''); }}
-        className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white disabled:opacity-40"
-      >
-        <option value="">-- 전체 --</option>
-        {step3Options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-      </select>
-    </div>
+                        <button
+                          onClick={startStudentTest}
+                          className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition-all shadow-lg flex items-center justify-center space-x-2"
+                        >
+                          <BookOpen className="w-4 h-4" />
+                          <span>선택 조건으로 스마트 문제 풀이 시작</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
-    <div>
-      <label className="block text-[11px] text-slate-400 mb-1">소단원</label>
-      <select
-        value={step4}
-        disabled={!step3 || step4Options.length === 0}
-        onChange={(e) => setStep4(e.target.value)}
-        className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white disabled:opacity-40"
-      >
-        <option value="">-- 전체 --</option>
-        {step4Options.map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
-      </select>
-    </div>
-  </div>
+                  {studentTab === 'assignment' && (
+                    <div className="p-6 bg-slate-900 border border-slate-800 rounded-2xl space-y-4">
+                      <h2 className="text-base font-bold text-white flex items-center space-x-2">
+                        <ClipboardList className="w-5 h-5 text-emerald-400" />
+                        <span>나에게 부여된 과제 목록</span>
+                      </h2>
 
-  {/* 2-2. 난이도, 문항 수 및 문제 간격 설정 */}
-  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-    <div>
-      <label className="block text-xs text-slate-400 mb-1">난이도</label>
-      <select
-        value={studentDiff}
-        onChange={(e) => setStudentDiff(e.target.value)}
-        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
-      >
-        <option value="전체">전체</option>
-        <option value="하">하</option>
-        <option value="중">중</option>
-        <option value="상">상</option>
-        <option value="최상">최상</option>
-      </select>
-    </div>
+                      <div className="grid gap-4">
+                        {assignments
+                          .filter(a => {
+                            if (!a.targetStudents || a.targetStudents.length === 0) return true;
+                            const matched = allowedStudents.find(st => st.name === currentStudent?.name);
+                            return matched ? a.targetStudents.includes(matched.id) : false;
+                          })
+                          .map(asg => {
+                            const subKey = `${asg.id}_${currentStudent?.name}`;
+                            const isSubmitted = !!submissions[subKey];
+                            return (
+                              <div key={asg.id} className="p-4 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between">
+                                <div>
+                                  <h3 className="text-sm font-bold text-white">{asg.title}</h3>
+                                  <p className="text-xs text-slate-400">마감일: {asg.dueDate} | 문항 수: {asg.problemIds.length}개</p>
+                                </div>
+                                <div>
+                                  {isSubmitted ? (
+                                    <span className="px-3 py-1.5 bg-slate-800 text-slate-400 rounded-lg text-xs font-bold">제출 완료</span>
+                                  ) : (
+                                    <button
+                                      onClick={() => startAssignmentTest(asg.id, asg.title, asg.problemIds)}
+                                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold shadow"
+                                    >
+                                      과제 풀기 시작
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    </div>
+                  )}
 
-    <div>
-      <label className="block text-xs text-slate-400 mb-1">객관식 문항 수</label>
-      <input
-        type="number"
-        min={0}
-        max={30}
-        value={multipleCount}
-        onChange={(e) => setMultipleCount(Number(e.target.value))}
-        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
-      />
-    </div>
+                  {studentTab === 'history' && (
+                    <div className="p-6 bg-slate-900 border border-slate-800 rounded-2xl space-y-4">
+                      <h2 className="text-base font-bold text-white flex items-center space-x-2">
+                        <Clock className="w-5 h-5 text-emerald-400" />
+                        <span>나의 이전 응시 기록 및 오답노트</span>
+                      </h2>
 
-    <div>
-      <label className="block text-xs text-slate-400 mb-1">주관식 문항 수</label>
-      <input
-        type="number"
-        min={0}
-        max={30}
-        value={subjectiveCount}
-        onChange={(e) => setSubjectiveCount(Number(e.target.value))}
-        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
-      />
-    </div>
+                      <div className="grid gap-3">
+                        {Object.entries(submissions)
+                          .filter(([k]) => k.includes(currentStudent?.name || ''))
+                          .map(([key, record]) => (
+                            <div key={key} className="p-4 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between">
+                              <div>
+                                <h3 className="text-sm font-bold text-white">{record.examTitle}</h3>
+                                <p className="text-xs text-slate-400">제출: {record.submittedAt} | 점수: {record.score}점</p>
+                              </div>
+                              <button
+                                onClick={() => setSelectedHistoryRecord(record)}
+                                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-bold"
+                              >
+                                풀이 내역 확인
+                              </button>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* 스마트 문제 풀이 및 캔버스 화면 */
+                <div className="space-y-6">
+                  <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                      <h2 className="text-sm font-bold text-white">{currentSolvingTitle}</h2>
+                      <p className="text-xs text-slate-400">총 {solvedProblems.length}문항 풀이 진행 중</p>
+                    </div>
 
-    {/* 문제 간격 조절 드롭다운 추가 */}
-    <div>
-      <label className="block text-xs text-slate-400 mb-1">문제 간 여백(간격)</label>
-      <select
-        value={problemSpacing}
-        onChange={(e) => setProblemSpacing(e.target.value)}
-        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
-      >
-        <option value="tight">좁게 (16px)</option>
-        <option value="normal">보통 (32px)</option>
-        <option value="wide">넓게 (64px)</option>
-        <option value="extra">매우 넓게 (120px)</option>
-      </select>
-    </div>
-  </div>
+                    {/* 캔버스 필기 도구 바 */}
+                    <div className="flex items-center gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
+                      <button
+                        onClick={() => setActiveTool('pen')}
+                        className={`p-2 rounded-lg text-xs flex items-center gap-1 ${activeTool === 'pen' ? 'bg-indigo-600 text-white' : 'text-slate-400'}`}
+                      >
+                        <PenTool className="w-4 h-4" /> 펜
+                      </button>
+                      <button
+                        onClick={() => setActiveTool('eraser')}
+                        className={`p-2 rounded-lg text-xs flex items-center gap-1 ${activeTool === 'eraser' ? 'bg-indigo-600 text-white' : 'text-slate-400'}`}
+                      >
+                        <Eraser className="w-4 h-4" /> 지우개
+                      </button>
+                      <button
+                        onClick={() => setActiveTool('lasso')}
+                        className={`p-2 rounded-lg text-xs flex items-center gap-1 ${activeTool === 'lasso' ? 'bg-indigo-600 text-white' : 'text-slate-400'}`}
+                      >
+                        <Lasso className="w-4 h-4" /> 선택
+                      </button>
+                      <input
+                        type="color"
+                        value={penColor}
+                        onChange={(e) => setPenColor(e.target.value)}
+                        className="w-6 h-6 rounded cursor-pointer bg-transparent border-0"
+                      />
+                    </div>
 
-  <button
-    onClick={startStudentTest}
-    className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-2 shadow-lg"
-  >
-    <Sparkles className="w-4 h-4" />
-    <span>맞춤 문제 추출 후 풀이 시작</span>
-  </button>
-</div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setStudentSolving(false)}
+                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-lg"
+                      >
+                        나가기
+                      </button>
+                      <button
+                        onClick={handleSubmitStudentWork}
+                        className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow"
+                      >
+                        답안 제출하기
+                      </button>
+                    </div>
+                  </div>
 
-                  <button
-                    onClick={startStudentTest}
-                    className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-2 shadow-lg"
-                  >
-                    <PenTool className="w-4 h-4" />
-                    <span>자율 맞춤 문제 생성 및 풀이 시작</span>
-                  </button>
+                  <div className="space-y-6">
+                    {solvedProblems.map((prob, idx) => (
+                      <div key={prob.id} className="p-6 bg-slate-900 border border-slate-800 rounded-2xl shadow-xl space-y-4 relative">
+                        <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                          <span className="font-bold text-sm text-indigo-400">문제 {idx + 1} ({prob.type === 'multiple' ? '객관식' : '주관식'})</span>
+                          <span className="text-xs text-slate-400">난이도: {prob.difficulty}</span>
+                        </div>
+
+                        <p className="text-sm text-slate-100 whitespace-pre-wrap">{prob.content}</p>
+
+                        {prob.contentImage && (
+                          <img src={prob.contentImage} alt="문제" className="max-h-80 rounded border border-slate-800 my-2" />
+                        )}
+
+                        {/* 문제별 터치 캔버스 필기 레이어 */}
+                        <div className="relative border border-slate-800/80 rounded-xl bg-slate-950/40 overflow-hidden">
+                          <canvas
+                            ref={(el) => { canvasRefs.current[prob.id] = el; }}
+                            width={800}
+                            height={300}
+                            onMouseDown={(e) => handleCanvasStart(prob.id, e)}
+                            onMouseMove={(e) => handleCanvasMove(prob.id, e)}
+                            onMouseUp={() => handleCanvasEnd(prob.id)}
+                            onTouchStart={(e) => handleCanvasStart(prob.id, e)}
+                            onTouchMove={(e) => handleCanvasMove(prob.id, e)}
+                            onTouchEnd={() => handleCanvasEnd(prob.id)}
+                            className="w-full h-48 touch-none cursor-crosshair"
+                          />
+                        </div>
+
+                        {/* 학생 답안 입력 영역 */}
+                        <div className="pt-2">
+                          {prob.type === 'multiple' ? (
+                            <div className="grid grid-cols-5 gap-2">
+                              {[1, 2, 3, 4, 5].map((num) => (
+                                <button
+                                  key={num}
+                                  onClick={() => setStudentAnswers({ ...studentAnswers, [prob.id]: String(num) })}
+                                  className={`py-2 rounded-lg text-xs font-bold border transition-all ${
+                                    studentAnswers[prob.id] === String(num)
+                                      ? 'bg-emerald-600 text-white border-emerald-500'
+                                      : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                                  }`}
+                                >
+                                  {numIcons[num - 1]} 번
+                                </button>
+                              ))}
+                            </div>
+                          ) : (
+                            <input
+                              type="text"
+                              placeholder="주관식 정답 수치/단답 입력"
+                              value={studentAnswers[prob.id] || ''}
+                              onChange={(e) => setStudentAnswers({ ...studentAnswers, [prob.id]: e.target.value })}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-xs text-white"
+                            />
+                          )}
+                        </div>
+
+                        {/* 채점 제출 후 해설 보기 영역 */}
+                        {showResult && (
+                          <div className="mt-4 p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-2 text-xs">
+                            <div className="flex items-center space-x-2">
+                              <span className="font-bold text-emerald-400">[정답]:</span>
+                              <span className="text-slate-200">{prob.answer}</span>
+                            </div>
+                            <div className="text-slate-400">
+                              <span className="font-bold text-slate-300">[해설]:</span> {prob.explanation}
+                            </div>
+                            {prob.youtubeUrl && (
+                              <a href={prob.youtubeUrl} target="_blank" rel="noreferrer" className="text-red-400 underline block pt-1">
+                                풀이 영상 바로가기
+                              </a>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
-              {/* 탭 2: 부여된 과제 목록 */}
-              {studentTab === 'assignment' && !studentSolving && (
-                <div className="p-8 bg-slate-900/80 border border-slate-800 rounded-2xl shadow-xl space-y-6">
-                  <h2 className="text-base font-bold text-white flex items-center space-x-2">
-                    <ClipboardList className="w-5 h-5 text-emerald-400" />
-                    <span>선생님이 부과한 과제 목록</span>
-                  </h2>
+              {/* 오답노트 모달 */}
+              {selectedHistoryRecord && (
+                <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+                  <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl max-w-3xl w-full space-y-4 shadow-2xl my-8">
+                    <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                      <div>
+                        <h3 className="text-base font-bold text-white">{selectedHistoryRecord.examTitle} 오답노트</h3>
+                        <p className="text-xs text-slate-400">제출일: {selectedHistoryRecord.submittedAt} | 점수: {selectedHistoryRecord.score}점</p>
+                      </div>
+                      <button onClick={() => setSelectedHistoryRecord(null)} className="text-slate-400 hover:text-white">
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
 
-                  <div className="grid grid-cols-1 gap-4">
-                    {assignments
-                      .filter(asg => {
-                        if (!asg.targetStudents || asg.targetStudents.length === 0) return true;
-                        const me = allowedStudents.find(s => s.name === currentStudent?.name);
-                        return me ? asg.targetStudents.includes(me.id) : true;
-                      })
-                      .map(asg => {
-                        const subKey = `${asg.id}_${currentStudent?.name}`;
-                        const isSubmitted = !!submissions[subKey];
+                    <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+                      {(selectedHistoryRecord.problems || []).map((prob, idx) => {
+                        const myAns = selectedHistoryRecord.answers[prob.id] || '미제출';
+                        const isCorrect = myAns.trim().toLowerCase() === (prob.answer || '').trim().toLowerCase();
                         return (
-                          <div key={asg.id} className="p-6 bg-slate-950 border border-slate-800 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] bg-emerald-950 text-emerald-400 px-2 py-0.5 rounded border border-emerald-800">
-                                  {asg.targetLevel}
-                                </span>
-                                <h3 className="text-base font-bold text-white">{asg.title}</h3>
-                              </div>
-                              <p className="text-xs text-slate-400 mt-1">
-                                마감기한: {asg.dueDate} | 문항 수: {asg.problemIds.length}문항
-                              </p>
+                          <div key={prob.id} className="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-indigo-300">문제 {idx + 1}</span>
+                              <span className={`px-2 py-0.5 rounded text-xs font-bold ${isCorrect ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
+                                {isCorrect ? '정답' : '오답'}
+                              </span>
                             </div>
-
-                            <div className="flex items-center gap-2">
-                              {isSubmitted ? (
-                                <span className="px-3 py-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-bold">
-                                  제출 완료 ({submissions[subKey].score}점)
-                                </span>
-                              ) : (
-                                <button
-                                  onClick={() => startAssignmentTest(asg.id, asg.title, asg.problemIds)}
-                                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center gap-1 shadow"
-                                >
-                                  <PenTool className="w-4 h-4" />
-                                  <span>과제 풀기 시작</span>
-                                </button>
-                              )}
+                            <p className="text-xs text-slate-200 whitespace-pre-wrap">{prob.content}</p>
+                            <div className="pt-2 border-t border-slate-800/80 text-xs space-y-1">
+                              <div><span className="text-slate-400">내가 작성한 답:</span> <strong className="text-white">{myAns}</strong></div>
+                              <div><span className="text-slate-400">실제 정답:</span> <strong className="text-emerald-400">{prob.answer}</strong></div>
+                              <div className="text-slate-400 pt-1"><span className="text-slate-300 font-bold">해설:</span> {prob.explanation}</div>
                             </div>
                           </div>
                         );
                       })}
+                    </div>
                   </div>
                 </div>
               )}
-
-              {/* 탭 3: 지난 제출 목록 & 오답 노트 복습 */}
-              {studentTab === 'history' && !studentSolving && (
-                <div className="p-8 bg-slate-900/80 border border-slate-800 rounded-2xl shadow-xl space-y-6">
-                  <h2 className="text-base font-bold text-white flex items-center space-x-2">
-                    <RotateCcw className="w-5 h-5 text-emerald-400" />
-                    <span>지난 과제 제출 및 오답 복습 공간</span>
-                  </h2>
-
-                  {selectedHistoryRecord ? (
-                    <div className="space-y-6 bg-slate-950 p-6 rounded-2xl border border-slate-800">
-                      <div className="flex justify-between items-center border-b border-slate-800 pb-4">
-                        <div>
-                          <h3 className="text-lg font-bold text-white">{selectedHistoryRecord.examTitle}</h3>
-                          <p className="text-xs text-slate-400 mt-1">
-                            제출일시: {selectedHistoryRecord.submittedAt} | 점수: <span className="text-emerald-400 font-bold">{selectedHistoryRecord.score}점</span>
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleDownloadHWP(selectedHistoryRecord.examTitle || '오답노트', selectedHistoryRecord.problems || [])}
-                            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold flex items-center gap-1"
-                          >
-                            <FileDown className="w-3.5 h-3.5" /> HWP 저장
-                          </button>
-                          <button
-                            onClick={handlePrintWindow}
-                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1"
-                          >
-                            <Printer className="w-3.5 h-3.5" /> 인쇄/PDF
-                          </button>
-                          <button
-                            onClick={() => setSelectedHistoryRecord(null)}
-                            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold"
-                          >
-                            목록으로
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="space-y-6">
-                        {(selectedHistoryRecord.problems || []).map((prob, idx) => {
-                          const myAns = selectedHistoryRecord.answers[prob.id] || '미제출';
-                          const isCorrect = myAns.trim().toLowerCase() === (prob.answer || '').trim().toLowerCase();
-
-                          return (
-                            <div key={prob.id} className={`p-6 rounded-2xl border ${isCorrect ? 'bg-slate-900/60 border-slate-800' : 'bg-rose-950/10 border-rose-900/40'}`}>
-                              <div className="flex justify-between items-center mb-3">
-                                <span className="font-bold text-sm text-white">
-                                  [{idx + 1}] {prob.title}
-                                </span>
-                                <span className={`px-2.5 py-0.5 text-xs font-bold rounded ${isCorrect ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
-                                  {isCorrect ? '정답' : '오답'}
-                                </span>
-                              </div>
-
-                              {prob.contentImage ? (
-                                <img src={prob.contentImage} alt="문제지문" className="max-h-60 rounded mb-3" />
-                              ) : (
-                                <p className="text-xs text-slate-300 whitespace-pre-wrap mb-3">{prob.content}</p>
-                              )}
-
-                              {prob.type === 'multiple' && prob.options && (
-                                <div className="grid grid-cols-1 md:grid-cols-5 gap-2 text-xs mb-4">
-                                  {prob.options.map((opt, i) => (
-                                    <div key={i} className="p-2 bg-slate-950/60 rounded border border-slate-800 text-slate-400">
-                                      {numIcons[i]} {opt}
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-
-                              <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-2 text-xs">
-                                <div className="flex gap-4">
-                                  <span>제출한 답: <strong className={isCorrect ? 'text-emerald-400' : 'text-rose-400'}>{myAns}</strong></span>
-                                  <span>실제 정답: <strong className="text-emerald-400">{prob.answer}</strong></span>
-                                </div>
-                                {prob.explanation && (
-                                  <div className="text-slate-400 pt-1">
-                                    <span className="font-bold text-slate-300">[해설]:</span> {prob.explanation}
-                                  </div>
-                                )}
-                                {prob.explanationImage && (
-                                  <img src={prob.explanationImage} alt="해설이미지" className="max-h-48 rounded pt-2" />
-                                )}
-                                {prob.youtubeUrl && (
-                                  <div className="pt-2 flex items-center gap-1 text-red-400">
-                                    <Video className="w-4 h-4" />
-                                    <a href={prob.youtubeUrl} target="_blank" rel="noreferrer" className="underline">
-                                      유튜브 해설 강의 바로가기
-                                    </a>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 gap-4">
-                      {Object.entries(submissions)
-                        .filter(([key]) => key.includes(currentStudent?.name || ''))
-                        .map(([key, record]) => (
-                          <div key={key} className="p-6 bg-slate-950 border border-slate-800 rounded-2xl flex justify-between items-center">
-                            <div>
-                              <h3 className="font-bold text-white text-base">{record.examTitle || '자율 제출 시험지'}</h3>
-                              <p className="text-xs text-slate-400 mt-1">제출일: {record.submittedAt}</p>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <span className="text-emerald-400 font-bold text-sm">{record.score}점</span>
-                              <button
-                                onClick={() => setSelectedHistoryRecord(record)}
-                                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center gap-1"
-                              >
-                                <Eye className="w-4 h-4" />
-                                <span>오답/해설 보기</span>
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-         {/* 학생 문제 풀이 캔버스 화면 */}
-      {studentSolving && (
-        <div className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <PenTool className="w-5 h-5 text-emerald-400" />
-              <span>{currentSolvingTitle}</span>
-            </h2>
-            <div className="flex items-center gap-2">
-              <button
-               onClick={() => {
-                  if (typeof (window as any).handleDownloadHWF === 'function') {
-                    (window as any).handleDownloadHWF();
-                  } else {
-                    alert('HWP 다운로드 기능을 준비 중입니다.');
-                  }
-                }}
-                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors"
-              >
-                <FileDown className="w-3.5 h-3.5" />
-                <span>한글(HWP) 다운로드</span>
-              </button>
             </div>
-          </div>
-
-          {/* 문제 목록 순회 */}
-          {solvedProblems.map((prob, idx) => {
-            const spacingMargin = 
-              problemSpacing === 'tight' ? '16px' :
-              problemSpacing === 'wide' ? '64px' :
-              problemSpacing === 'extra' ? '120px' : '32px';
-
-            return (
-              <div 
-                key={prob.id || idx} 
-                style={{ marginBottom: spacingMargin }} 
-                className="border-b border-slate-200 print:border-black/20 page-break-inside-avoid pb-3 space-y-4"
-              >
-                {/* 1. 문제 번호 및 본문 */}
-                <div className="flex gap-2 items-start">
-                  <span className="font-bold text-base print:text-black">[{idx + 1}]</span>
-                  <div className="flex-1">
-                    {prob.contentImage ? (
-                      <img src={prob.contentImage} alt="문제" className="max-h-80 object-contain mb-2" />
-                    ) : (
-                      <p className="text-sm print:text-black whitespace-pre-wrap">{prob.content}</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* 2. 주관식 정답 입력 */}
-                {prob.type === 'subjective' && (
-                  <div className="mb-6">
-                    <label className="block text-xs font-bold text-amber-400 mb-2">정답 입력</label>
-                    <input
-                      type="text"
-                      placeholder="정답 입력"
-                      value={studentAnswers[prob.id] || ''}
-                      onChange={(e) => setStudentAnswers({ ...studentAnswers, [prob.id]: e.target.value })}
-                      className="w-full md:w-64 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white"
-                    />
-                 {/* 3. 필기용 캔버스 */}
-                <div className="relative border border-slate-800 rounded-xl overflow-hidden bg-slate-950 print:hidden">
-                  <canvas
-                    ref={(el) => {
-                      if (canvasRefs.current) {
-                        canvasRefs.current[prob.id] = el;
-                      }
-                    }}
-                    width={800}
-                    height={300}
-                    onMouseDown={(e) => handleCanvasStart(prob.id, e)}
-                    onMouseMove={(e) => handleCanvasMove(prob.id, e)}
-                    onMouseUp={() => handleCanvasEnd(prob.id)}
-                    onTouchStart={(e) => handleCanvasStart(prob.id, e)}
-                    onTouchMove={(e) => handleCanvasMove(prob.id, e)}
-                    onTouchEnd={() => handleCanvasEnd(prob.id)}
-                    className="w-full h-48 cursor-crosshair"
-                  />
-                </div>
+          )
+        )}
+      </main>
     </div>
   );
-})}
-</div>
-)}
+}
